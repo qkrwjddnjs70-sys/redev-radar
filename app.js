@@ -20,9 +20,18 @@ function stageBucket(stage){
   return STAGE_BUCKETS[0];
 }
 
-// 모아타운(소규모주택정비) 판별 — 가로주택정비·소규모재건축·소규모재개발 또는 이름에 '모아'
+// 주거단지 재개발/재건축만 대상 — 도심상업·도시정비형(업무/상업) 제외
+// 유형 → 카테고리 (mutually exclusive). null = 비주거(제외)
+const RESI_CAT = {
+  '가로주택정비':'moa', '소규모재건축':'moa', '소규모재개발':'moa',   // 🏘️ 모아타운(소규모)
+  '재건축':'recon', '지역주택':'recon', '리모델링':'recon',            // 🏢 재건축(아파트)
+  '재개발(주택정비형)':'redev',                                        // 🏠 주택 재개발
+  // 제외: '재개발(도시정비형)' = 도심 상업·업무 재개발
+};
+const catOf = p => RESI_CAT[p.type] || ((p.name || '').includes('모아') ? 'moa' : null);
+const isResi = p => catOf(p) !== null;
 const MOA_TYPES = new Set(['가로주택정비', '소규모재건축', '소규모재개발']);
-const isMoa = p => MOA_TYPES.has(p.type) || (p.name || '').includes('모아');
+const isMoa = p => catOf(p) === 'moa';
 
 // 정적 캐시된 블록정밀 격자 (백엔드 없이 가능한 동)
 const PINSET_AVAILABLE = new Set(['11170_10500', '11560_12200']);
@@ -172,10 +181,13 @@ function renderProjects(){
   $('#projCat').classList.toggle('hidden', !on);
   const zoneable = on && state.projCat==='moa';
   $('#moaZoneWrap').classList.toggle('hidden', !zoneable);
-  if (!on){ $('#projCount').textContent = state.projects.length; return; }
+  const resiTotal = state.projects.filter(isResi).length;
+  if (!on){ $('#projCount').textContent = resiTotal; return; }
   const cat = state.projCat;
-  const list = state.projects.filter(p =>
-    cat==='moa' ? isMoa(p) : cat==='normal' ? !isMoa(p) : true);
+  const list = state.projects.filter(p => {
+    const c = catOf(p); if (!c) return false;      // 비주거 제외
+    return cat === 'all' || c === cat;
+  });
   $('#projCount').textContent = list.length;
 
   // 모아타운 '구역으로 묶기' 모드 — 개별 대신 클러스터 구역 표시
@@ -435,7 +447,9 @@ function renderMoaList(){
 
 // ---------- 통계 대시보드 ----------
 function openDash(){
-  const all = state.all, proj = state.projects;
+  const all = state.all, proj = state.projects.filter(isResi);   // 주거단지 재개발·재건축만
+  const catCnt = { recon:0, redev:0, moa:0 };
+  proj.forEach(p => { const c=catOf(p); if(catCnt[c]!=null) catCnt[c]++; });
   const cand = all.filter(d=>d.verdict==='후보');
   const avgNohu = all.reduce((s,d)=>s+(d.nohu||0),0)/all.length;
   const gradeCnt = {S:0,A:0,B:0,C:0,D:0}; all.forEach(d=>gradeCnt[d.grade]!=null&&gradeCnt[d.grade]++);
@@ -458,12 +472,12 @@ function openDash(){
 
   $('#dashBody').innerHTML = `
     <h2>📊 서울 재개발 통계</h2>
-    <div class="dsub">건축물대장 ${state.all.length?$('#dataYear').textContent:''} · 377개 동 · 실제 정비사업 ${proj.length}곳</div>
+    <div class="dsub">건축물대장 ${state.all.length?$('#dataYear').textContent:''} · 377개 동 · 주거단지 재개발·재건축 ${proj.length}곳(추진중)</div>
     <div class="dstat">
       <div class="box"><b style="color:#7dd3fc">${cand.length}</b><span>🎯 미지정 후보 동</span></div>
-      <div class="box"><b class="g-S">${gradeCnt.S}</b><span>S등급 (90점+)</span></div>
-      <div class="box"><b>${proj.length}</b><span>진행 정비사업</span></div>
-      <div class="box"><b style="color:#22d3ee">${moa.length}</b><span>🏘️ 모아타운(소규모)</span></div>
+      <div class="box"><b>${catCnt.recon}</b><span>🏢 재건축</span></div>
+      <div class="box"><b>${catCnt.redev}</b><span>🏠 재개발</span></div>
+      <div class="box"><b style="color:#22d3ee">${catCnt.moa}</b><span>🏘️ 모아타운</span></div>
     </div>
     <div class="dsection">
       <h3>자치구별 미지정 후보 동 (상위 ${Math.min(guRank.length,15)})</h3>
