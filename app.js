@@ -238,12 +238,15 @@ function renderSubway(){
   subwayLayer.clearLayers();
   if (!state.showSubway || !state.subway) return;
   const showNames = map.getZoom() >= SUBWAY_LABEL_ZOOM;
+  const mobile = window.matchMedia('(max-width:760px)').matches;
+  const lineW = mobile ? 2.25 : 4.5;     // 모바일은 선 굵기 절반
+  const dotR = mobile ? 2 : 3;
   const seen = new Set();
   state.subway.lines.forEach(ln => {
     const pts = ln.stations.map(s => [s.lat, s.lng]);
-    L.polyline(pts, { pane:'subwayPane', color:ln.color, weight:4.5, opacity:.95 }).addTo(subwayLayer);
+    L.polyline(pts, { pane:'subwayPane', color:ln.color, weight:lineW, opacity:.95 }).addTo(subwayLayer);
     ln.stations.forEach(s => {
-      L.circleMarker([s.lat, s.lng], { pane:'subwayPane', radius:3, color:'#fff', weight:1.2,
+      L.circleMarker([s.lat, s.lng], { pane:'subwayPane', radius:dotR, color:'#fff', weight:1.2,
         fillColor:ln.color, fillOpacity:1 })
         .bindTooltip(`${s.name} · ${ln.name}`, {direction:'top'})
         .addTo(subwayLayer);
@@ -606,7 +609,7 @@ function bindUI(){
     else { if (mc.parentElement !== mapWrapEl) mapWrapEl.appendChild(mc); }
   };
   placeControls();
-  mq.addEventListener('change', placeControls);
+  mq.addEventListener('change', () => { placeControls(); if (state.showSubway) renderSubway(); });
   $('#dashBtn').addEventListener('click', openDash);
   $('#dashClose').addEventListener('click', () => $('#dash').classList.add('hidden'));
   $('#dash').addEventListener('click', e => { if (e.target.id==='dash') $('#dash').classList.add('hidden'); });
