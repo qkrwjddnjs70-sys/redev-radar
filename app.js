@@ -25,8 +25,7 @@ function stageBucket(stage){
 const RESI_CAT = {
   '가로주택정비':'moa', '소규모재건축':'moa', '소규모재개발':'moa',   // 🏘️ 모아타운(소규모)
   '재건축':'recon', '지역주택':'recon', '리모델링':'recon',            // 🏢 재건축(아파트)
-  '재개발(주택정비형)':'redev',                                        // 🏠 주택 재개발
-  // 제외: '재개발(도시정비형)' = 도심 상업·업무 재개발
+  '재개발(주택정비형)':'redev', '재개발(도시정비형)':'redev',          // 🏠 재개발(주택+역세권·재정비촉진·공공재개발)
 };
 const catOf = p => RESI_CAT[p.type] || ((p.name || '').includes('모아') ? 'moa' : null);
 const isResi = p => catOf(p) !== null;
