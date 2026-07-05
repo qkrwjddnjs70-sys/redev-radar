@@ -96,6 +96,11 @@ body{
 .dot{width:10px; height:10px; border-radius:50%; display:inline-block}
 .dot.g-S{background:var(--S)} .dot.g-A{background:var(--A)} .dot.g-B{background:var(--B)}
 .dot.g-C{background:var(--C)} .dot.g-D{background:var(--D)}
+.legend .star-leg{color:#fbbf24; font-size:12px; width:10px; text-align:center; text-shadow:0 0 2px #000}
+
+/* 노후 高·미개발 별표 */
+.star-mark{color:#fbbf24; font-size:12px; line-height:14px; width:14px; text-align:center;
+  text-shadow:0 0 3px #000,0 0 2px #000,0 0 1px #000}
 
 /* Map controls */
 .mapctrl{position:absolute; bottom:14px; left:14px; z-index:500; background:rgba(17,23,31,.95);

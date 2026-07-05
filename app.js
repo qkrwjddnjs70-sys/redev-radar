@@ -75,6 +75,8 @@ Promise.all([
   state.projects = (proj || []).filter(p => p.lat && p.lng);
   state.subway = sub;
   state.moaZones = zones || [];
+  // 개발 프로젝트가 있는 (구|동) 집합 — 노후도 高·미개발 동에 별표 표시용
+  state.projectDongs = new Set(state.projects.filter(isResi).map(p => `${p.gu}|${p.dong}`));
   $('#dataYear').textContent = j.year;
   $('#projCount').textContent = state.projects.length;
   $('#moaZoneN').textContent = state.moaZones.filter(z => z.n >= 2).length;
@@ -171,6 +173,12 @@ function renderMarkers(){
     m.on('click', () => select(k, false));
     m.bindTooltip(`${d.dong} · ${d.grade}등급 ${Math.round(d.score)}점`, {direction:'top'});
     m.addTo(layer); markers.set(k, m);
+    // 노후도 高(≥70) & 개발 프로젝트 없음 → 작은 별 (미지정 발굴 기회)
+    if ((d.nohu||0) >= 70 && state.projectDongs && !state.projectDongs.has(k)){
+      L.marker([d.lat, d.lng], { interactive:false, keyboard:false,
+        icon: L.divIcon({ className:'', html:'<div class="star-mark">★</div>', iconSize:[14,14], iconAnchor:[7,7] })
+      }).addTo(layer);
+    }
   });
 }
 
