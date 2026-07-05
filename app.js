@@ -200,6 +200,7 @@ function renderProjects(){
       radius: moa?9:8, color: moa?'#22d3ee':'#0b0f14', weight: moa?2.5:1.5,
       fillColor:b.color, fillOpacity:.95,
     }).bindTooltip(`${p.name||'(이름없음)'}<br>${moa?'🏘️ ':''}${p.type||''} · ${p.stage||'-'}`, {direction:'top'})
+      .on('click', () => showZoneDetail(p))
       .addTo(projLayer);
   });
 }
@@ -245,6 +246,34 @@ function renderSubway(){
 }
 // 줌 변경 시 라벨 표시/숨김 갱신
 map.on('zoomend', () => { if (state.showSubway) renderSubway(); });
+
+// ---------- 정비사업 구역 상세 (점 클릭) ----------
+const CAT_LABEL = { recon:'🏢 재건축', redev:'🏠 재개발', moa:'🏘️ 모아타운' };
+function showZoneDetail(p){
+  const b = stageBucket(p.stage), cat = catOf(p);
+  const curIdx = STAGE_BUCKETS.findIndex(x => x.key === b.key);
+  const steps = STAGE_BUCKETS.map((s,i) =>
+    `<div class="zstep ${i<=curIdx?'done':''}" style="--c:${s.color}"><i></i><span>${s.label.split('(')[0]}</span></div>`).join('');
+  $('#detailBody').innerHTML = `
+    <div class="dbody">
+      <div class="dhead">
+        <div class="gbadge" style="background:${b.color};color:#fff">${(CAT_LABEL[cat]||'🏗️').slice(0,2)}</div>
+        <div><h2 style="font-size:18px;line-height:1.25">${p.name||'(이름없음)'}</h2>
+          <div class="dgu">${p.gu} ${p.dong||''} · ${CAT_LABEL[cat]||p.type}</div></div>
+      </div>
+      <div class="zstage" style="border-color:${b.color}">
+        <span class="zstage-lbl">현재 진행 단계</span>
+        <span class="zstage-v" style="color:${b.color}">${p.stage||'-'}</span>
+      </div>
+      <div class="zsteps">${steps}</div>
+      <div class="dmetrics">
+        <div class="metric"><div class="mk">사업 유형</div><div class="mv" style="font-size:14px">${p.type||'-'}</div></div>
+        <div class="metric"><div class="mk">위치</div><div class="mv" style="font-size:14px">${p.gu} ${p.dong||''}</div></div>
+      </div>
+      <div class="disclaimer">서울 정비사업 정보몽땅 기준 진행단계입니다. 조합·시공사·일정 등 최신 세부는 자치구·조합 고시를 별도 확인하세요.</div>
+    </div>`;
+  $('#detail').classList.remove('hidden');
+}
 
 function buildStageLegend(){
   $('#stageLegend').innerHTML = STAGE_BUCKETS.map(b =>
