@@ -88,7 +88,7 @@ body{
 /* Map */
 #mapWrap{flex:1; position:relative}
 #map{position:absolute; inset:0; background:#0b0f14}
-.legend{position:absolute; bottom:18px; right:14px; z-index:500; background:rgba(17,23,31,.92);
+.legend{position:absolute; top:14px; right:14px; z-index:500; background:rgba(17,23,31,.92);
   border:1px solid var(--line); border-radius:10px; padding:9px 12px; font-size:11px;
   display:flex; flex-direction:column; gap:4px; backdrop-filter:blur(6px)}
 .legend .lt{color:var(--mut); font-weight:700; margin-bottom:2px}
@@ -98,8 +98,10 @@ body{
 .dot.g-C{background:var(--C)} .dot.g-D{background:var(--D)}
 
 /* Map controls */
-.mapctrl{position:absolute; top:14px; left:14px; z-index:500; background:rgba(17,23,31,.92);
-  border:1px solid var(--line); border-radius:10px; padding:9px 12px; backdrop-filter:blur(6px); max-width:230px}
+.mapctrl{position:absolute; bottom:14px; left:14px; z-index:500; background:rgba(17,23,31,.95);
+  border:1px solid var(--acc); border-radius:10px; padding:10px 13px; backdrop-filter:blur(6px); max-width:250px;
+  box-shadow:0 4px 16px rgba(0,0,0,.4)}
+.mapctrl > .ctoggle:first-child{font-size:13.5px; font-weight:700}
 .ctoggle{display:flex; align-items:center; gap:7px; font-size:12.5px; cursor:pointer; user-select:none}
 .ctoggle input{accent-color:var(--acc)}
 .ctoggle b{color:var(--acc)}
