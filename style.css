@@ -224,9 +224,10 @@ body{
 .sim-note{font-size:10.5px; color:var(--mut); margin-top:10px; line-height:1.5; opacity:.75}
 
 @media(max-width:760px){
-  #sidebar{width:100%; position:absolute; z-index:600; height:48vh; bottom:0; top:auto;
-    border-right:none; border-top:1px solid var(--line); border-radius:16px 16px 0 0}
-  #mapWrap{height:52vh}
-  #app{flex-direction:column}
+  #app{flex-direction:column-reverse}   /* 지도=위, 사이드바=아래 */
+  #mapWrap{flex:none; height:45vh}
+  #sidebar{width:100%; height:55vh; flex:none; position:static; z-index:auto;
+    border-right:none; border-top:1px solid var(--line); overflow-y:auto}
+  #sidebar .list{flex:none}          /* 사이드바 전체가 스크롤 (필터+리스트 모두 도달) */
   .detail{width:100%}
 }
