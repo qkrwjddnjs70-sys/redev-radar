@@ -39,7 +39,7 @@ const state = {
   all: [], projects: [], subway: null, moaZones: [],
   verdict: 'all', gu: 'all', grades: new Set(['S','A','B','C','D']),
   nohu: 70, walk: 30, far: 200, q: '', sort: 'score', sel: null,
-  showProjects: false, projCat: 'all', moaZone: false, showSubway: false,
+  showProjects: false, projCat: 'all', moaZone: false, showSubway: true,
   mode: 'dong',   // 'dong' | 'moa'
 };
 
@@ -87,6 +87,7 @@ Promise.all([
   $('#moaModeN').textContent = state.moaZones.length;
   resetControls();
   initGuOptions(); buildStageLegend(); bindUI(); apply();
+  renderSubway();   // 지하철 노선도 기본 표시
 }).catch(e => { $('#list').innerHTML = `<li style="padding:20px;color:#f87171">데이터 로드 실패: ${e}</li>`; });
 
 // 브라우저 폼 복원으로 인한 슬라이더/입력 잔존값 방지 — DOM을 기본값으로 강제
@@ -96,11 +97,11 @@ function resetControls(){
   $('#farRange').value = 200; $('#farVal').textContent = '200%';
   $('#search').value = ''; $('#sortSel').value = 'score';
   $('#guSel').value = 'all'; $('#projToggle').checked = false;
-  $('#moaZone').checked = false; $('#subwayToggle').checked = false;
+  $('#moaZone').checked = false; $('#subwayToggle').checked = true;
   document.querySelectorAll('#gradeFilter input').forEach(i => i.checked = true);
   $('#moaModeBtn').classList.remove('active');
   Object.assign(state, { verdict:'all', gu:'all', grades:new Set(['S','A','B','C','D']),
-    nohu:70, walk:30, far:200, q:'', sort:'score', showProjects:false, projCat:'all', moaZone:false, showSubway:false, mode:'dong' });
+    nohu:70, walk:30, far:200, q:'', sort:'score', showProjects:false, projCat:'all', moaZone:false, showSubway:true, mode:'dong' });
 }
 
 function initGuOptions(){
@@ -593,6 +594,9 @@ function bindUI(){
   });
   $('#moaZone').addEventListener('change', e => { state.moaZone=e.target.checked; renderProjects(); });
   $('#subwayToggle').addEventListener('change', e => { state.showSubway=e.target.checked; renderSubway(); });
+  const closeSplash = () => $('#splash').classList.add('hide');
+  $('#splashStart').addEventListener('click', closeSplash);
+  $('#splash').addEventListener('click', e => { if (e.target.id==='splash') closeSplash(); });
   $('#dashBtn').addEventListener('click', openDash);
   $('#dashClose').addEventListener('click', () => $('#dash').classList.add('hidden'));
   $('#dash').addEventListener('click', e => { if (e.target.id==='dash') $('#dash').classList.add('hidden'); });

@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://unpkg.com" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-  <link rel="stylesheet" href="./style.css?v=13" />
+  <link rel="stylesheet" href="./style.css?v=14" />
 </head>
 <body>
   <div id="app">
@@ -96,7 +96,7 @@
         </div>
         <label class="ctoggle sub hidden" id="moaZoneWrap"><input type="checkbox" id="moaZone"> 🔵 구역으로 묶기 <b id="moaZoneN">34</b></label>
         <div id="stageLegend" class="stagelegend hidden"></div>
-        <label class="ctoggle sep"><input type="checkbox" id="subwayToggle"> 🚇 지하철 노선도</label>
+        <label class="ctoggle sep"><input type="checkbox" id="subwayToggle" checked> 🚇 지하철 노선도</label>
       </div>
       <div class="legend">
         <span class="lt">종합점수 등급</span>
@@ -108,6 +108,20 @@
         <span><i class="star-leg">★</i>노후高·미개발</span>
       </div>
     </main>
+  </div>
+
+  <!-- 시작 스플래시 -->
+  <div id="splash">
+    <div class="splash-card">
+      <div class="splash-logo">📡</div>
+      <h1>재개발 레이더</h1>
+      <p class="splash-sub">서울 재개발 후보 · 정비사업 탐색 지도</p>
+      <div class="splash-credit">
+        <div>만든이 · <b>당산동 사는 박정원</b></div>
+        <div>문의 · <a href="mailto:qkrwjddnjs70@gmail.com">qkrwjddnjs70@gmail.com</a></div>
+      </div>
+      <button id="splashStart">시작하기</button>
+    </div>
   </div>
 
   <!-- Dashboard modal -->
@@ -126,6 +140,6 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script src="./app.js?v=13"></script>
+  <script src="./app.js?v=14"></script>
 </body>
 </html>

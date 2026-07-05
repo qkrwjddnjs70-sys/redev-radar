@@ -102,6 +102,23 @@ body{
 .star-mark{color:#fbbf24; font-size:12px; line-height:14px; width:14px; text-align:center;
   text-shadow:0 0 3px #000,0 0 2px #000,0 0 1px #000}
 
+/* 시작 스플래시 */
+#splash{position:fixed; inset:0; z-index:3000; background:rgba(8,11,16,.92); backdrop-filter:blur(8px);
+  display:grid; place-items:center; padding:24px; transition:opacity .35s}
+#splash.hide{opacity:0; pointer-events:none}
+.splash-card{text-align:center; max-width:340px; width:100%; background:var(--panel);
+  border:1px solid var(--line); border-radius:20px; padding:38px 28px; box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.splash-logo{font-size:52px; line-height:1; margin-bottom:10px}
+.splash-card h1{font-size:26px; font-weight:800; letter-spacing:-.5px}
+.splash-sub{font-size:13px; color:var(--mut); margin-top:6px}
+.splash-credit{margin:26px 0 8px; padding:16px; background:var(--panel2); border:1px solid var(--line);
+  border-radius:12px; font-size:13px; color:var(--mut); line-height:2}
+.splash-credit b{color:var(--txt)}
+.splash-credit a{color:#7dd3fc; text-decoration:none}
+#splashStart{margin-top:18px; width:100%; background:var(--acc); border:none; color:#fff;
+  padding:13px; border-radius:11px; font-size:15px; font-weight:700; cursor:pointer}
+#splashStart:hover{background:#2f6fd6}
+
 /* Map controls */
 .mapctrl{position:absolute; bottom:14px; left:14px; z-index:500; background:rgba(17,23,31,.95);
   border:1px solid var(--acc); border-radius:10px; padding:10px 13px; backdrop-filter:blur(6px); max-width:250px;
