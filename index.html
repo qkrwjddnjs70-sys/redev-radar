@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://unpkg.com" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-  <link rel="stylesheet" href="./style.css?v=3" />
+  <link rel="stylesheet" href="./style.css?v=4" />
 </head>
 <body>
   <div id="app">
@@ -56,8 +56,8 @@
         </div>
 
         <div class="frow slider">
-          <label class="flabel">노후도 ≥ <span id="nohuVal">0</span>%</label>
-          <input type="range" id="nohuRange" min="0" max="100" value="0" step="5" />
+          <label class="flabel">노후도 ≥ <span id="nohuVal">70</span>%</label>
+          <input type="range" id="nohuRange" min="60" max="100" value="70" step="5" />
         </div>
 
         <div class="frow slider">
@@ -66,8 +66,8 @@
         </div>
 
         <div class="frow slider">
-          <label class="flabel">추정 용적률 ≤ <span id="farVal">전체</span> <span class="hint">(고밀 제외)</span></label>
-          <input type="range" id="farRange" min="100" max="800" value="800" step="50" />
+          <label class="flabel">추정 용적률 ≤ <span id="farVal">200%</span> <span class="hint">(고밀 제외)</span></label>
+          <input type="range" id="farRange" min="100" max="800" value="200" step="50" />
         </div>
       </div>
 
@@ -125,6 +125,6 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script src="./app.js?v=3"></script>
+  <script src="./app.js?v=4"></script>
 </body>
 </html>

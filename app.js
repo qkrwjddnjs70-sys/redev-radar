@@ -39,7 +39,7 @@ const PINSET_AVAILABLE = new Set(['11170_10500', '11560_12200']);
 const state = {
   all: [], projects: [], subway: null, moaZones: [],
   verdict: 'all', gu: 'all', grades: new Set(['S','A','B','C','D']),
-  nohu: 0, walk: 30, far: 800, q: '', sort: 'score', sel: null,
+  nohu: 70, walk: 30, far: 200, q: '', sort: 'score', sel: null,
   showProjects: false, projCat: 'all', moaZone: false, showSubway: false,
   mode: 'dong',   // 'dong' | 'moa'
 };
@@ -86,16 +86,16 @@ Promise.all([
 
 // 브라우저 폼 복원으로 인한 슬라이더/입력 잔존값 방지 — DOM을 기본값으로 강제
 function resetControls(){
-  $('#nohuRange').value = 0; $('#nohuVal').textContent = '0';
+  $('#nohuRange').value = 70; $('#nohuVal').textContent = '70';
   $('#walkRange').value = 30; $('#walkVal').textContent = '전체';
-  $('#farRange').value = 800; $('#farVal').textContent = '전체';
+  $('#farRange').value = 200; $('#farVal').textContent = '200%';
   $('#search').value = ''; $('#sortSel').value = 'score';
   $('#guSel').value = 'all'; $('#projToggle').checked = false;
   $('#moaZone').checked = false; $('#subwayToggle').checked = false;
   document.querySelectorAll('#gradeFilter input').forEach(i => i.checked = true);
   $('#moaModeBtn').classList.remove('active');
   Object.assign(state, { verdict:'all', gu:'all', grades:new Set(['S','A','B','C','D']),
-    nohu:0, walk:30, far:800, q:'', sort:'score', showProjects:false, projCat:'all', moaZone:false, showSubway:false, mode:'dong' });
+    nohu:70, walk:30, far:200, q:'', sort:'score', showProjects:false, projCat:'all', moaZone:false, showSubway:false, mode:'dong' });
 }
 
 function initGuOptions(){
