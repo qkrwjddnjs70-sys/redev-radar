@@ -247,4 +247,7 @@ body{
     border-right:none; border-top:1px solid var(--line); overflow-y:auto}
   #sidebar .list{flex:none}          /* 사이드바 전체가 스크롤 (필터+리스트 모두 도달) */
   .detail{width:100%}
+  /* 지도 컨트롤(🏗️·🚇)이 사이드바로 이동했을 때 정렬 */
+  #sidebar #mapControls{position:static; max-width:none; margin:0 18px 12px; box-shadow:none;
+    backdrop-filter:none; background:var(--panel2)}
 }

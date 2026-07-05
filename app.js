@@ -597,6 +597,16 @@ function bindUI(){
   const closeSplash = () => $('#splash').classList.add('hide');
   $('#splashStart').addEventListener('click', closeSplash);
   $('#splash').addEventListener('click', e => { if (e.target.id==='splash') closeSplash(); });
+
+  // 모바일: 지도 컨트롤(🏗️·🚇)을 사이드바 필터 아래로 이동 (데스크톱은 지도 위 유지)
+  const mq = window.matchMedia('(max-width:760px)');
+  const mc = $('#mapControls'), mapWrapEl = $('#mapWrap'), listHead = document.querySelector('.list-head');
+  const placeControls = () => {
+    if (mq.matches){ if (mc.parentElement !== $('#sidebar')) $('#sidebar').insertBefore(mc, listHead); }
+    else { if (mc.parentElement !== mapWrapEl) mapWrapEl.appendChild(mc); }
+  };
+  placeControls();
+  mq.addEventListener('change', placeControls);
   $('#dashBtn').addEventListener('click', openDash);
   $('#dashClose').addEventListener('click', () => $('#dash').classList.add('hidden'));
   $('#dash').addEventListener('click', e => { if (e.target.id==='dash') $('#dash').classList.add('hidden'); });
