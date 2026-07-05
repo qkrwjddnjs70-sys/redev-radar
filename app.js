@@ -316,7 +316,9 @@ function showDetail(d){
   const gridKey = `${d.sgg}_${d.bjd}`;
   const hasGrid = PINSET_AVAILABLE.has(gridKey);
   const walk = d.walk_min!=null ? `${d.walk_min}분 <small>(${d.station_dist}m)</small>` : '—';
-  const far  = d.est_far!=null ? `${fmt(d.est_far)}%` : '—';
+  // 추정 용적률: 대지면적 누락으로 30% 미만·미상은 신뢰불가 → 저밀 표기
+  const far  = (d.est_far!=null && d.est_far>=30) ? `${fmt(d.est_far)}%`
+             : `<span style="color:#8b97a6;font-size:13px">저밀 <small>(추정한계)</small></span>`;
   const slope= d.avg_slope!=null ? `${fmt(d.avg_slope)}°` : '—';
   const note = d.note ? `<div class="dnote"><b>비고</b> · ${d.note}</div>` : '';
   $('#detailBody').innerHTML = `
