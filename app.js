@@ -163,9 +163,11 @@ function renderMarkers(){
   state.filtered.forEach(d => {
     const k = key(d);
     const r = 5 + (d.score-30)/8;
+    const sel = state.sel===k;
     const m = L.circleMarker([d.lat, d.lng], {
-      radius: Math.max(5, r), color: state.sel===k?'#fff':'#0b0f14', weight: state.sel===k?3:1,
-      fillColor: GCOL[d.grade]||'#666', fillOpacity:.82,
+      radius: Math.max(5, r), color: sel ? '#fff' : (GCOL[d.grade]||'#666'),
+      weight: sel ? 3 : 1.5,
+      fillColor: GCOL[d.grade]||'#666', fillOpacity: sel ? .25 : .08,  // 노후도 원=투명(테두리만)
     });
     m.on('click', () => select(k, false));
     m.bindTooltip(`${d.dong} · ${d.grade}등급 ${Math.round(d.score)}점`, {direction:'top'});
@@ -196,8 +198,8 @@ function renderProjects(){
   list.forEach(p => {
     const b = stageBucket(p.stage), moa = isMoa(p);
     L.circleMarker([p.lat, p.lng], {
-      radius: moa?5:4, color: moa?'#22d3ee':'#0b0f14', weight: moa?2:1,
-      fillColor:b.color, fillOpacity:.9,
+      radius: moa?9:8, color: moa?'#22d3ee':'#0b0f14', weight: moa?2.5:1.5,
+      fillColor:b.color, fillOpacity:.95,
     }).bindTooltip(`${p.name||'(이름없음)'}<br>${moa?'🏘️ ':''}${p.type||''} · ${p.stage||'-'}`, {direction:'top'})
       .addTo(projLayer);
   });
