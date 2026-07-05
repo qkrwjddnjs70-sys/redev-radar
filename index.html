@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>재개발 레이더 · 서울</title>
+  <link rel="preconnect" href="https://unpkg.com" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <link rel="stylesheet" href="./style.css?v=2" />
+</head>
+<body>
+  <div id="app">
+    <!-- Sidebar -->
+    <aside id="sidebar">
+      <header class="side-head">
+        <div class="brand">
+          <span class="logo">📡</span>
+          <div>
+            <h1>재개발 레이더</h1>
+            <p class="sub">서울 · 건축물대장 <span id="dataYear"></span> 기준 · 377개 동</p>
+          </div>
+          <button id="dashBtn" class="dashbtn" title="통계 대시보드">📊</button>
+        </div>
+      </header>
+
+      <!-- Summary chips -->
+      <div id="summary" class="summary"></div>
+
+      <!-- Filters -->
+      <div class="filters">
+        <div class="frow">
+          <input type="search" id="search" placeholder="동·구 검색 (예: 청운동, 중구)" autocomplete="off" />
+        </div>
+
+        <div class="frow seg" id="verdictSeg">
+          <button data-v="all" class="active">전체</button>
+          <button data-v="후보">🎯 미지정 후보</button>
+          <button data-v="진행중">진행중</button>
+          <button data-v="경계">경계</button>
+        </div>
+        <div class="frow"><button id="moaModeBtn" class="modebtn">🏘️ 모아타운 구역 조회 <b id="moaModeN">116</b></button></div>
+
+        <div class="frow">
+          <label class="flabel">자치구</label>
+          <select id="guSel"><option value="all">전체 (25개 구)</option></select>
+        </div>
+
+        <div class="frow grades" id="gradeFilter">
+          <span class="flabel">등급</span>
+          <label><input type="checkbox" value="S" checked><b class="g-S">S</b></label>
+          <label><input type="checkbox" value="A" checked><b class="g-A">A</b></label>
+          <label><input type="checkbox" value="B" checked><b class="g-B">B</b></label>
+          <label><input type="checkbox" value="C" checked><b class="g-C">C</b></label>
+          <label><input type="checkbox" value="D" checked><b class="g-D">D</b></label>
+        </div>
+
+        <div class="frow slider">
+          <label class="flabel">노후도 ≥ <span id="nohuVal">0</span>%</label>
+          <input type="range" id="nohuRange" min="0" max="100" value="0" step="5" />
+        </div>
+
+        <div class="frow slider">
+          <label class="flabel">역세권 도보 ≤ <span id="walkVal">전체</span></label>
+          <input type="range" id="walkRange" min="0" max="30" value="30" step="1" />
+        </div>
+
+        <div class="frow slider">
+          <label class="flabel">추정 용적률 ≤ <span id="farVal">전체</span> <span class="hint">(고밀 제외)</span></label>
+          <input type="range" id="farRange" min="100" max="800" value="800" step="50" />
+        </div>
+      </div>
+
+      <div class="list-head">
+        <span id="resultCount">—</span>
+        <select id="sortSel" class="sortsel">
+          <option value="score">종합점수순</option>
+          <option value="nohu">노후도순</option>
+          <option value="walk">역세권순</option>
+          <option value="far">사업성(저용적)순</option>
+        </select>
+      </div>
+      <ul id="list" class="list"></ul>
+    </aside>
+
+    <!-- Map -->
+    <main id="mapWrap">
+      <div id="map"></div>
+      <div id="mapControls" class="mapctrl">
+        <label class="ctoggle"><input type="checkbox" id="projToggle"> 🏗️ 실제 정비사업 <b id="projCount">814</b>곳</label>
+        <div id="projCat" class="projcat seg hidden">
+          <button data-c="all" class="active">전체</button>
+          <button data-c="moa">🏘️ 모아타운</button>
+          <button data-c="normal">일반</button>
+        </div>
+        <label class="ctoggle sub hidden" id="moaZoneWrap"><input type="checkbox" id="moaZone"> 🔵 구역으로 묶기 <b id="moaZoneN">34</b></label>
+        <div id="stageLegend" class="stagelegend hidden"></div>
+        <label class="ctoggle sep"><input type="checkbox" id="subwayToggle"> 🚇 지하철 노선도</label>
+      </div>
+      <div class="legend">
+        <span class="lt">종합점수 등급</span>
+        <span><i class="dot g-S"></i>S 90+</span>
+        <span><i class="dot g-A"></i>A 80+</span>
+        <span><i class="dot g-B"></i>B 65+</span>
+        <span><i class="dot g-C"></i>C 50+</span>
+        <span><i class="dot g-D"></i>D</span>
+      </div>
+    </main>
+  </div>
+
+  <!-- Dashboard modal -->
+  <div id="dash" class="dash hidden">
+    <div class="dash-card">
+      <button id="dashClose" class="dclose">✕</button>
+      <div id="dashBody"></div>
+    </div>
+  </div>
+
+  <!-- Detail panel -->
+  <div id="detail" class="detail hidden">
+    <button id="detailClose" class="dclose">✕</button>
+    <div id="detailBody"></div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="./app.js?v=2"></script>
+</body>
+</html>
