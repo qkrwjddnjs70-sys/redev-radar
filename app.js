@@ -62,6 +62,10 @@ const markers = new Map();
 
 const key = d => `${d.gu}|${d.dong}`;
 const $ = s => document.querySelector(s);
+// 네이버 부동산 지도(좌표) 링크 — 해당 위치 매물 보기
+const naverLink = (lat, lng) => `https://new.land.naver.com/houses?ms=${lat},${lng},16`;
+const naverBtn = (lat, lng) =>
+  `<a class="dbtn naver" href="${naverLink(lat, lng)}" target="_blank" rel="noopener">🔗 네이버 부동산 · 이 지역 매물 보기</a>`;
 
 // ---------- load ----------
 const noCache = { cache: 'no-store' };   // 데이터 갱신이 즉시 반영되도록 캐시 우회
@@ -278,6 +282,7 @@ function showZoneDetail(p){
         <div class="metric"><div class="mk">사업 유형</div><div class="mv" style="font-size:14px">${p.type||'-'}</div></div>
         <div class="metric"><div class="mk">위치</div><div class="mv" style="font-size:14px">${p.gu} ${p.dong||''}</div></div>
       </div>
+      ${naverBtn(p.lat, p.lng)}
       <div class="disclaimer">서울 정비사업 정보몽땅 기준 진행단계입니다. 조합·시공사·일정 등 최신 세부는 자치구·조합 고시를 별도 확인하세요.</div>
     </div>`;
   $('#detail').classList.remove('hidden');
@@ -339,6 +344,7 @@ function showDetail(d){
         <div class="metric"><div class="mk">평균 경사</div><div class="mv">${slope}</div></div>
       </div>
       ${note}
+      ${naverBtn(d.lat, d.lng)}
       <button class="dbtn ${hasGrid?'':'off'}" id="gridBtn" ${hasGrid?'':'disabled'}>
         ${hasGrid ? '🔬 블록정밀 격자 보기 (100m)' : '🔬 블록정밀 — 이 동은 캐시 없음(백엔드 필요)'}
       </button>
