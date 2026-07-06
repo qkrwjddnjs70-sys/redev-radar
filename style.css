@@ -1,7 +1,9 @@
 :root{
-  --bg:#0b0f14; --panel:#11171f; --panel2:#161d27; --line:#222c39;
-  --txt:#e6edf3; --mut:#8b97a6; --acc:#3b82f6;
-  --S:#ef4444; --A:#f97316; --B:#eab308; --C:#64748b; --D:#3f4a5a;
+  --bg:#eef1f5; --panel:#ffffff; --panel2:#f3f6fa; --line:#dce2ea;
+  --txt:#1a2230; --mut:#64748b; --acc:#2563eb;
+  --S:#ef4444; --A:#f97316; --B:#ca8a04; --C:#64748b; --D:#94a3b8;
+  --cand:#0891b2; --moa:#0e7490;          /* 후보·모아 강조 (라이트 대비) */
+  --panel-a:rgba(255,255,255,.95);        /* 반투명 패널 배경 */
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
@@ -45,11 +47,11 @@ body{
 .seg button{flex:1; background:var(--panel2); border:1px solid var(--line); color:var(--mut);
   border-radius:8px; padding:8px 2px; font-size:11.5px; cursor:pointer; font-weight:600; transition:.12s}
 .seg button.active{background:var(--acc); border-color:var(--acc); color:#fff}
-.modebtn{width:100%; background:var(--panel2); border:1px solid #0e7490; color:#67e8f9;
+.modebtn{width:100%; background:var(--panel2); border:1px solid var(--moa); color:var(--moa);
   border-radius:8px; padding:9px; font-size:12.5px; font-weight:700; cursor:pointer}
 .modebtn:hover{background:#0e7490; color:#fff}
 .modebtn.active{background:#0e7490; color:#fff; box-shadow:0 0 0 2px rgba(34,211,238,.3)}
-.modebtn b{color:#22d3ee}
+.modebtn b{color:var(--moa)}
 .modebtn.active b{color:#fff}
 .grades{flex-direction:row; align-items:center; gap:10px; flex-wrap:wrap}
 .grades label{display:flex; align-items:center; gap:4px; font-size:13px; cursor:pointer}
@@ -82,13 +84,13 @@ body{
 .iscore{text-align:right; font-size:11px; color:var(--mut)}
 .iscore b{font-size:16px; color:var(--txt); display:block}
 .vtag{display:inline-block; font-size:10px; padding:1px 6px; border-radius:5px; margin-top:2px}
-.v후보{background:#1e3a5f; color:#7dd3fc} .v진행중{background:#3a2e1e; color:#fbbf24}
-.v경계{background:#2d2d3a; color:#a5b4fc} .v신축위주{background:#23303a; color:#94a3b8}
+.v후보{background:#cffafe; color:#0e7490} .v진행중{background:#fef3c7; color:#b45309}
+.v경계{background:#e0e7ff; color:#4338ca} .v신축위주{background:#e2e8f0; color:#475569}
 
 /* Map */
 #mapWrap{flex:1; position:relative}
-#map{position:absolute; inset:0; background:#0b0f14}
-.legend{position:absolute; top:14px; right:14px; z-index:500; background:rgba(17,23,31,.92);
+#map{position:absolute; inset:0; background:#e8ebef}
+.legend{position:absolute; top:14px; right:14px; z-index:500; background:var(--panel-a);
   border:1px solid var(--line); border-radius:10px; padding:9px 12px; font-size:11px;
   display:flex; flex-direction:column; gap:4px; backdrop-filter:blur(6px)}
 .legend .lt{color:var(--mut); font-weight:700; margin-bottom:2px}
@@ -96,14 +98,14 @@ body{
 .dot{width:10px; height:10px; border-radius:50%; display:inline-block}
 .dot.g-S{background:var(--S)} .dot.g-A{background:var(--A)} .dot.g-B{background:var(--B)}
 .dot.g-C{background:var(--C)} .dot.g-D{background:var(--D)}
-.legend .star-leg{color:#fbbf24; font-size:12px; width:10px; text-align:center; text-shadow:0 0 2px #000}
+.legend .star-leg{color:#f59e0b; font-size:12px; width:10px; text-align:center; text-shadow:0 1px 1px rgba(0,0,0,.25)}
 
 /* 노후 高·미개발 별표 */
-.star-mark{color:#fbbf24; font-size:12px; line-height:14px; width:14px; text-align:center;
-  text-shadow:0 0 3px #000,0 0 2px #000,0 0 1px #000}
+.star-mark{color:#f59e0b; font-size:13px; line-height:14px; width:14px; text-align:center;
+  text-shadow:0 0 3px #fff,0 0 2px #fff,0 1px 1px rgba(0,0,0,.35)}
 
 /* 시작 스플래시 */
-#splash{position:fixed; inset:0; z-index:3000; background:rgba(8,11,16,.92); backdrop-filter:blur(8px);
+#splash{position:fixed; inset:0; z-index:3000; background:rgba(238,241,245,.94); backdrop-filter:blur(8px);
   display:grid; place-items:center; padding:24px; transition:opacity .35s}
 #splash.hide{opacity:0; pointer-events:none}
 .splash-card{text-align:center; max-width:340px; width:100%; background:var(--panel);
@@ -114,25 +116,25 @@ body{
 .splash-credit{margin:26px 0 8px; padding:16px; background:var(--panel2); border:1px solid var(--line);
   border-radius:12px; font-size:13px; color:var(--mut); line-height:2}
 .splash-credit b{color:var(--txt)}
-.splash-credit a{color:#7dd3fc; text-decoration:none}
+.splash-credit a{color:var(--acc); text-decoration:none}
 #splashStart{margin-top:18px; width:100%; background:var(--acc); border:none; color:#fff;
   padding:13px; border-radius:11px; font-size:15px; font-weight:700; cursor:pointer}
 #splashStart:hover{background:#2f6fd6}
 
 /* Map controls */
-.mapctrl{position:absolute; bottom:14px; left:14px; z-index:500; background:rgba(17,23,31,.95);
+.mapctrl{position:absolute; bottom:14px; left:14px; z-index:500; background:var(--panel-a);
   border:1px solid var(--acc); border-radius:10px; padding:10px 13px; backdrop-filter:blur(6px); max-width:250px;
   box-shadow:0 4px 16px rgba(0,0,0,.4)}
 .mapctrl > .ctoggle:first-child{font-size:13.5px; font-weight:700}
 .ctoggle{display:flex; align-items:center; gap:7px; font-size:12.5px; cursor:pointer; user-select:none}
 .ctoggle input{accent-color:var(--acc)}
 .ctoggle b{color:var(--acc)}
-.ctoggle.sub{margin-top:7px; font-size:12px; color:#67e8f9}
-.ctoggle.sub b{color:#22d3ee}
+.ctoggle.sub{margin-top:7px; font-size:12px; color:var(--moa)}
+.ctoggle.sub b{color:var(--moa)}
 .ctoggle.sub.hidden{display:none}
 .ctoggle.sep{margin-top:9px; padding-top:9px; border-top:1px solid var(--line)}
 .subway-label{background:transparent; border:none; box-shadow:none; font-size:10px; font-weight:700;
-  color:#fff; text-shadow:0 0 3px #000,0 0 3px #000; white-space:nowrap; pointer-events:none}
+  color:#1a2230; text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 2px #fff; white-space:nowrap; pointer-events:none}
 .moa-count{background:#0e7490; border:1px solid #22d3ee; border-radius:10px; color:#fff;
   font-size:11px; font-weight:800; width:22px; height:22px; display:grid; place-items:center; box-shadow:0 0 6px rgba(0,0,0,.5)}
 .projcat{margin-top:8px; gap:4px}
@@ -149,7 +151,7 @@ body{
 .proj-pin{border-radius:2px; border:1px solid rgba(0,0,0,.5)}
 
 /* Dashboard */
-.dash{position:fixed; inset:0; z-index:2000; background:rgba(5,8,12,.72); backdrop-filter:blur(4px);
+.dash{position:fixed; inset:0; z-index:2000; background:rgba(15,23,42,.35); backdrop-filter:blur(4px);
   display:grid; place-items:center; padding:24px; transition:opacity .18s}
 .dash.hidden{opacity:0; pointer-events:none}
 .dash-card{position:relative; width:760px; max-width:100%; max-height:88vh; overflow-y:auto;
@@ -237,7 +239,7 @@ body{
 .sim-row .v{font-weight:700}
 .sim-row.hl{font-size:16px; margin-top:4px; padding-top:8px; border-top:1px dashed var(--line)}
 .sim-row.hl .v{font-size:18px}
-.pos{color:#22c55e} .neg{color:#f87171}
+.pos{color:#16a34a} .neg{color:#dc2626}
 .sim-note{font-size:10.5px; color:var(--mut); margin-top:10px; line-height:1.5; opacity:.75}
 
 @media(max-width:760px){

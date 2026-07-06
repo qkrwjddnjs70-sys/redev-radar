@@ -1,5 +1,5 @@
 // 재개발 레이더 — 서울 동별 재개발 후보 탐색기
-const GCOL = { S:'#ef4444', A:'#f97316', B:'#eab308', C:'#64748b', D:'#3f4a5a' };
+const GCOL = { S:'#ef4444', A:'#f97316', B:'#ca8a04', C:'#64748b', D:'#94a3b8' };
 
 // 정비사업 진행단계 → 5단계 버킷(색상)
 const STAGE_BUCKETS = [
@@ -44,7 +44,7 @@ const state = {
 };
 
 const map = L.map('map', { zoomControl:true, attributionControl:false }).setView([37.5512, 126.9882], 11);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom:19 }).addTo(map);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom:19 }).addTo(map);
 L.control.attribution({ prefix:false }).addAttribution('© CARTO · 건축물대장·정비사업').addTo(map);
 
 // 지하철 노선은 동 마커 위에 보이도록 전용 pane(오버레이 400 위, 마커 600 아래)
@@ -141,7 +141,7 @@ function renderSummary(){
   state.filtered.forEach(d => counts[d.grade]!=null && counts[d.grade]++);
   const cand = state.filtered.filter(d=>d.verdict==='후보').length;
   $('#summary').innerHTML =
-    `<div class="chip" title="현재 필터의 미지정 후보"><b style="color:#7dd3fc">${cand}</b><span>🎯 후보</span></div>` +
+    `<div class="chip" title="현재 필터의 미지정 후보"><b style="color:#0891b2">${cand}</b><span>🎯 후보</span></div>` +
     ['S','A','B','C'].map(g =>
       `<div class="chip"><b class="g-${g}">${counts[g]}</b><span>${g}등급</span></div>`).join('');
 }
@@ -171,7 +171,7 @@ function renderMarkers(){
     const r = 5 + (d.score-30)/8;
     const sel = state.sel===k;
     const m = L.circleMarker([d.lat, d.lng], {
-      radius: Math.max(5, r), color: sel ? '#fff' : (GCOL[d.grade]||'#666'),
+      radius: Math.max(5, r), color: sel ? '#0f172a' : (GCOL[d.grade]||'#666'),
       weight: sel ? 3 : 1.5,
       fillColor: GCOL[d.grade]||'#666', fillOpacity: sel ? .25 : .08,  // 노후도 원=투명(테두리만)
     });
@@ -210,7 +210,7 @@ function renderProjects(){
   list.forEach(p => {
     const b = stageBucket(p.stage), moa = isMoa(p);
     L.circleMarker([p.lat, p.lng], {
-      radius: moa?9:8, color: moa?'#22d3ee':'#0b0f14', weight: moa?2.5:1.5,
+      radius: moa?9:8, color: moa?'#0891b2':'#0b0f14', weight: moa?2.5:1.5,
       fillColor:b.color, fillOpacity:.95,
     }).bindTooltip(`${p.name||'(이름없음)'}<br>${moa?'🏘️ ':''}${p.type||''} · ${p.stage||'-'}`, {direction:'top'})
       .on('click', () => showZoneDetail(p))
@@ -221,8 +221,8 @@ function renderProjects(){
 function renderMoaZones(){
   zoneLayer.clearLayers();
   state.moaZones.forEach(z => {
-    L.circle([z.lat, z.lng], { radius:z.r, color:'#22d3ee', weight:1.5,
-      fillColor:'#22d3ee', fillOpacity: z.n>=2 ? .16 : .07 })
+    L.circle([z.lat, z.lng], { radius:z.r, color:'#0891b2', weight:1.5,
+      fillColor:'#0891b2', fillOpacity: z.n>=2 ? .16 : .07 })
       .bindTooltip(`<b>${z.gu} ${z.dong} 일대</b><br>모아타운 추정구역 · 소규모정비 ${z.n}곳<br>${z.names.slice(0,3).join('<br>')}${z.n>3?'<br>…':''}`,
         {direction:'top'})
       .addTo(zoneLayer);
@@ -295,7 +295,7 @@ function showZoneDetail(p){
 function buildStageLegend(){
   $('#stageLegend').innerHTML = STAGE_BUCKETS.map(b =>
     `<span><i style="background:${b.color}"></i>${b.label}</span>`).join('') +
-    `<span style="margin-top:2px"><i style="background:transparent;border:2px solid #22d3ee"></i>🏘️ 모아타운(청록 테두리)</span>`;
+    `<span style="margin-top:2px"><i style="background:transparent;border:2px solid #0891b2"></i>🏘️ 모아타운(청록 테두리)</span>`;
 }
 
 // ---------- selection / detail ----------
@@ -474,7 +474,7 @@ function renderMoaList(){
   const total = zones.reduce((s,z)=>s+z.n,0);
   $('#resultCount').textContent = `${zones.length}개 구역 · ${total}개 사업`;
   $('#summary').innerHTML =
-    `<div class="chip"><b style="color:#22d3ee">${zones.length}</b><span>🏘️ 모아 구역</span></div>` +
+    `<div class="chip"><b style="color:#0891b2">${zones.length}</b><span>🏘️ 모아 구역</span></div>` +
     `<div class="chip"><b>${zones.filter(z=>z.n>=2).length}</b><span>다중사업</span></div>` +
     `<div class="chip"><b>${total}</b><span>소규모정비</span></div>` +
     `<div class="chip"><b>${new Set(zones.map(z=>z.gu)).size}</b><span>자치구</span></div>`;
@@ -524,10 +524,10 @@ function openDash(){
     <h2>📊 서울 재개발 통계</h2>
     <div class="dsub">건축물대장 ${state.all.length?$('#dataYear').textContent:''} · 377개 동 · 주거단지 재개발·재건축 ${proj.length}곳(추진중)</div>
     <div class="dstat">
-      <div class="box"><b style="color:#7dd3fc">${cand.length}</b><span>🎯 미지정 후보 동</span></div>
+      <div class="box"><b style="color:#0891b2">${cand.length}</b><span>🎯 미지정 후보 동</span></div>
       <div class="box"><b>${catCnt.recon}</b><span>🏢 재건축</span></div>
       <div class="box"><b>${catCnt.redev}</b><span>🏠 재개발</span></div>
-      <div class="box"><b style="color:#22d3ee">${catCnt.moa}</b><span>🏘️ 모아타운</span></div>
+      <div class="box"><b style="color:#0891b2">${catCnt.moa}</b><span>🏘️ 모아타운</span></div>
     </div>
     <div class="dsection">
       <h3>자치구별 미지정 후보 동 (상위 ${Math.min(guRank.length,15)})</h3>
@@ -554,7 +554,7 @@ function openDash(){
       <h3>🏘️ 자치구별 모아타운·소규모주택정비 (${moa.length}곳, 상위 ${Math.min(moaRank.length,15)})</h3>
       ${moaRank.slice(0,15).map(m=>`<div class="gbar">
         <span class="gn">${m.gu}</span>
-        <span class="gt"><span class="gf" style="width:${m.n/maxMoa*100}%;background:#22d3ee"></span></span>
+        <span class="gt"><span class="gf" style="width:${m.n/maxMoa*100}%;background:#0891b2"></span></span>
         <span class="gv">${m.n}곳</span></div>`).join('')}
     </div>`;
   $('#dash').classList.remove('hidden');
