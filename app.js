@@ -500,6 +500,8 @@ $('#detailClose').addEventListener('click', () => {
 
 // ---------- 모아타운 구역 조회 모드 ----------
 function enterMoaMode(){
+  if (state.mode !== 'moa')   // 진입 전 지도 상태 저장 → 나갈 때 복원
+    state._prevProj = { showProjects: state.showProjects, projCat: state.projCat, moaZone: state.moaZone };
   state.mode = 'moa';
   $('#moaModeBtn').classList.add('active');
   $('#verdictSeg').querySelectorAll('button').forEach(x=>x.classList.remove('active'));
@@ -515,7 +517,12 @@ function exitMoaMode(){
   if (state.mode==='dong') return;
   state.mode = 'dong';
   $('#moaModeBtn').classList.remove('active');
-  state.moaZone = false; $('#moaZone').checked = false;
+  // 진입 전 상태로 복원 (모아 조회 켜기 전이 기본이면 정비사업 레이어도 꺼짐)
+  const prev = state._prevProj || { showProjects:false, projCat:'all', moaZone:false };
+  state.showProjects = prev.showProjects; $('#projToggle').checked = prev.showProjects;
+  state.projCat = prev.projCat;
+  $('#projCat').querySelectorAll('button').forEach(x=>x.classList.toggle('active', x.dataset.c===prev.projCat));
+  state.moaZone = prev.moaZone; $('#moaZone').checked = prev.moaZone;
   renderProjects();
 }
 
