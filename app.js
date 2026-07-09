@@ -204,8 +204,8 @@ function renderProjects(){
   });
   $('#projCount').textContent = list.length;
 
-  // 모아타운 '구역으로 묶기' 모드 — 개별 대신 클러스터 구역 표시
-  if (zoneable && state.moaZone){ renderMoaZones(); return; }
+  // 모아타운 카테고리: 개별 가로주택 구역 점 + 이를 묶는 모아타운 영역(원+라벨) 함께 표시
+  if (zoneable && state.moaZone) renderMoaZones();
 
   list.forEach(p => {
     const b = stageBucket(p.stage), moa = isMoa(p);
@@ -218,19 +218,37 @@ function renderProjects(){
   });
 }
 
+// 모아타운 = 인접 가로주택/소규모 구역 2개+ 묶음. 점선 원 + "동명 N구역" 라벨로 관리단위 표시
 function renderMoaZones(){
   zoneLayer.clearLayers();
-  state.moaZones.forEach(z => {
-    L.circle([z.lat, z.lng], { radius:z.r, color:'#0891b2', weight:1.5,
-      fillColor:'#0891b2', fillOpacity: z.n>=2 ? .16 : .07 })
-      .bindTooltip(`<b>${z.gu} ${z.dong} 일대</b><br>모아타운 추정구역 · 소규모정비 ${z.n}곳<br>${z.names.slice(0,3).join('<br>')}${z.n>3?'<br>…':''}`,
-        {direction:'top'})
+  state.moaZones.filter(z => z.n >= 2).forEach(z => {
+    L.circle([z.lat, z.lng], { radius:z.r, color:'#0891b2', weight:1.5, dashArray:'5 4',
+      fillColor:'#0891b2', fillOpacity:.1 })
+      .on('click', () => showMoaZoneDetail(z))
       .addTo(zoneLayer);
-    if (z.n >= 2){
-      L.marker([z.lat, z.lng], { icon: L.divIcon({ className:'', html:`<div class="moa-count">${z.n}</div>`,
-        iconSize:[22,22], iconAnchor:[11,11] }) }).addTo(zoneLayer);
-    }
+    L.marker([z.lat, z.lng], { interactive:false, keyboard:false, icon: L.divIcon({ className:'',
+      html:`<div class="moa-label">🏘️ ${z.dong} <b>${z.n}구역</b></div>`, iconSize:[0,0], iconAnchor:[0,0] })
+    }).addTo(zoneLayer);
   });
+}
+
+function showMoaZoneDetail(z){
+  $('#detailBody').innerHTML = `
+    <div class="dbody">
+      <div class="dhead">
+        <div class="gbadge" style="background:var(--moa);color:#fff">🏘️</div>
+        <div><h2 style="font-size:20px">${z.dong} 모아타운</h2>
+          <div class="dgu">${z.gu} · 소규모정비 <b style="color:var(--moa)">${z.n}구역</b> 묶음</div></div>
+      </div>
+      <div class="dproj">
+        <div class="dproj-h">묶인 가로주택·소규모정비 구역</div>
+        ${z.names.map(n=>`<div class="dproj-row"><span class="dproj-name" style="color:var(--txt)">• ${n}</span></div>`).join('')}
+        ${z.n>z.names.length?`<div class="dproj-more">…외 ${z.n-z.names.length}구역</div>`:''}
+      </div>
+      ${naverBtn(z.lat, z.lng)}
+      <div class="disclaimer">모아타운(소규모주택정비 관리지역)은 인접한 <b>가로주택정비·소규모재건축 구역을 묶어</b> 함께 정비하는 단위입니다. 본 영역은 인접 사업 근접 클러스터링 추정치로, 서울시 공식 관리지역 경계와는 다를 수 있습니다.</div>
+    </div>`;
+  $('#detail').classList.remove('hidden');
 }
 
 // ---------- 지하철 노선도 ----------
@@ -602,6 +620,7 @@ function bindUI(){
     const b = e.target.closest('button'); if (!b) return;
     $('#projCat').querySelectorAll('button').forEach(x=>x.classList.remove('active'));
     b.classList.add('active'); state.projCat=b.dataset.c;
+    if (b.dataset.c==='moa'){ state.moaZone=true; $('#moaZone').checked=true; }   // 묶음 자동 표시
     if (b.dataset.c!=='moa' && state.mode==='moa'){ exitMoaMode(); apply(); }
     renderProjects();
   });

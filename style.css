@@ -137,6 +137,10 @@ body{
   color:#1a2230; text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 2px #fff; white-space:nowrap; pointer-events:none}
 .moa-count{background:#0e7490; border:1px solid #22d3ee; border-radius:10px; color:#fff;
   font-size:11px; font-weight:800; width:22px; height:22px; display:grid; place-items:center; box-shadow:0 0 6px rgba(0,0,0,.5)}
+.moa-label{background:var(--moa); color:#fff; font-size:10.5px; font-weight:600; padding:2px 8px;
+  border-radius:11px; white-space:nowrap; box-shadow:0 2px 6px rgba(0,0,0,.3);
+  transform:translate(-50%,-50%); border:1px solid rgba(255,255,255,.4)}
+.moa-label b{font-weight:800}
 .projcat{margin-top:8px; gap:4px}
 .projcat.hidden{display:none}
 .projcat button{flex:1; background:var(--bg); border:1px solid var(--line); color:var(--mut);
