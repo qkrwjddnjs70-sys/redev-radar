@@ -172,8 +172,8 @@ function renderMarkers(){
     const sel = state.sel===k;
     const m = L.circleMarker([d.lat, d.lng], {
       radius: Math.max(5, r), color: sel ? '#0f172a' : (GCOL[d.grade]||'#666'),
-      weight: sel ? 3 : 1.5,
-      fillColor: GCOL[d.grade]||'#666', fillOpacity: sel ? .25 : .08,  // 노후도 원=투명(테두리만)
+      weight: sel ? 3.5 : 2.2,
+      fillColor: GCOL[d.grade]||'#666', fillOpacity: sel ? .3 : .16,  // 라이트 테마 대비 강화
     });
     m.on('click', () => select(k, false));
     m.bindTooltip(`${d.dong} · ${d.grade}등급 ${Math.round(d.score)}점`, {direction:'top'});
