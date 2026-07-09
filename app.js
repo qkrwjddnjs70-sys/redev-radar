@@ -292,6 +292,7 @@ const CURATED_PLANS = [
   { match:'반포주공1단지', units:5022, floors:35, builder:'현대건설',        brand:'디에이치 클래스트', src:'착공(2024)' },
   { match:'이문1재정비촉진', units:3069, floors:27, builder:'삼성물산',       brand:'래미안 라그란데',  src:'2025 입주' },
   { match:'방배5구역',   units:3064, floors:33, builder:'현대건설',          brand:'디에이치 방배',    src:'2024 분양' },
+  { match:'남성아파트',   units:488,  floors:28, builder:'한화 건설부문',      brand:'포레나 문래',      src:'한화 시공사 선정' },
 ];
 const curatedPlan = p => CURATED_PLANS.find(c => (p.name||'').includes(c.match));
 function showZoneDetail(p){
