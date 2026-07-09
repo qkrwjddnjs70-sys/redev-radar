@@ -372,7 +372,7 @@ function showDetail(d){
         <div class="metric"><div class="mk">평균 층수</div><div class="mv">${fmt(d.avg_floor)}<small> 층</small></div></div>
         <div class="metric"><div class="mk">추정 용적률</div><div class="mv">${far}</div></div>
         <div class="metric"><div class="mk">역세권 도보</div><div class="mv">${walk}</div></div>
-        <div class="metric"><div class="mk">건물 수 / 노후</div><div class="mv">${d.buildings}<small> / ${d.old} 노후</small></div></div>
+        <div class="metric"><div class="mk">건물 수</div><div class="mv">${d.buildings}<small>동${d.sampled?` · 표본 ${d.sampled}중 ${d.old} 노후` : ` · ${d.old} 노후`}</small></div></div>
         <div class="metric"><div class="mk">평균 경사</div><div class="mv">${slope}</div></div>
       </div>
       ${note}
