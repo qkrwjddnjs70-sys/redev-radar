@@ -288,7 +288,10 @@ map.on('zoomend', () => { if (state.showSubway) renderSubway(); });
 const CAT_LABEL = { recon:'🏢 재건축', redev:'🏠 재개발', moa:'🏘️ 모아타운' };
 // 뉴스로 확정된 주요 구역의 재개발 '계획' (수동 큐레이션 — 이름 부분일치). 확인되는 대로 추가.
 const CURATED_PLANS = [
-  { match:'문래동4가', units:2176, floors:49, builder:'삼성물산·대우건설', brand:'문래 네이븐', src:'2025.09 시공사 선정' },
+  { match:'문래동4가',   units:2176, floors:49, builder:'삼성물산·대우건설', brand:'문래 네이븐',     src:'2025.09 시공사 선정' },
+  { match:'반포주공1단지', units:5022, floors:35, builder:'현대건설',        brand:'디에이치 클래스트', src:'착공(2024)' },
+  { match:'이문1재정비촉진', units:3069, floors:27, builder:'삼성물산',       brand:'래미안 라그란데',  src:'2025 입주' },
+  { match:'방배5구역',   units:3064, floors:33, builder:'현대건설',          brand:'디에이치 방배',    src:'2024 분양' },
 ];
 const curatedPlan = p => CURATED_PLANS.find(c => (p.name||'').includes(c.match));
 function showZoneDetail(p){
@@ -308,17 +311,6 @@ function showZoneDetail(p){
       </div>
       <div class="plan-note">📰 ${plan.src} · 조합·언론 발표 기준. 인허가 과정에서 변경될 수 있습니다.</div>
     </div>` : '';
-  const hasCur = p.cur_units || p.cur_far || p.builder;
-  const curHtml = hasCur ? `
-    <div class="cur-spec">
-      <div class="cur-h">📐 현재 단지 정보 <span>재건축 前</span></div>
-      <div class="cur-grid">
-        ${p.cur_units?`<div><span>현 세대수</span><b>${p.cur_units.toLocaleString()}세대</b></div>`:''}
-        ${p.cur_far?`<div><span>현 용적률</span><b>${p.cur_far}%</b></div>`:''}
-        ${p.builder?`<div><span>최초 시공사</span><b>${p.builder}</b></div>`:''}
-      </div>
-      <div class="cur-warn">⚠️ <b>재건축 前 기존 아파트</b> 수치입니다(신축 계획 아님). 재건축 후 세대수·시공사는 아래 검색으로 확인하세요.</div>
-    </div>` : '';
   $('#detailBody').innerHTML = `
     <div class="dbody">
       <div class="dhead">
@@ -332,7 +324,6 @@ function showZoneDetail(p){
       </div>
       <div class="zsteps">${steps}</div>
       ${planHtml}
-      ${curHtml}
       <div class="dmetrics">
         <div class="metric"><div class="mk">사업 유형</div><div class="mv" style="font-size:14px">${p.type||'-'}</div></div>
         <div class="metric"><div class="mk">위치</div><div class="mv" style="font-size:14px">${p.gu} ${p.dong||''}</div></div>
