@@ -330,6 +330,15 @@ function showDetail(d){
              : `<span style="color:#8b97a6;font-size:13px">저밀 <small>(추정한계)</small></span>`;
   const slope= d.avg_slope!=null ? `${fmt(d.avg_slope)}°` : '—';
   const note = d.note ? `<div class="dnote"><b>비고</b> · ${d.note}</div>` : '';
+  // 이 동의 진행중 정비사업 + 진행단계 (동 상세에서 바로 확인)
+  const dongProj = state.projects.filter(p => isResi(p) && p.gu===d.gu && p.dong===d.dong)
+    .sort((a,b)=> stageBucket(b.stage).key.localeCompare(stageBucket(a.stage).key));
+  const projHtml = dongProj.length
+    ? `<div class="dproj"><div class="dproj-h">🏗️ 이 동의 진행중 정비사업 · ${dongProj.length}건</div>` +
+      dongProj.slice(0,8).map(p=>{ const b=stageBucket(p.stage);
+        return `<div class="dproj-row"><span class="dproj-stage" style="background:${b.color}">${p.stage||'-'}</span><span class="dproj-name">${p.name}</span></div>`;
+      }).join('') + (dongProj.length>8?`<div class="dproj-more">…외 ${dongProj.length-8}건</div>`:'') + `</div>`
+    : ((d.nohu||0)>=70 ? `<div class="dproj none">⭐ 진행중 정비사업 없음 — <b>미지정 발굴 후보</b></div>` : '');
   $('#detailBody').innerHTML = `
     <div class="dbody">
       <div class="dhead">
@@ -337,6 +346,7 @@ function showDetail(d){
         <div><h2>${d.dong}</h2><div class="dgu">${d.gu} · ${d.subtype} · <span class="vtag v${d.verdict}">${d.verdict}</span></div></div>
       </div>
       <div class="dscore"><span class="big">${Math.round(d.score)}</span><span class="lbl">/ 100 종합 재개발 점수</span></div>
+      ${projHtml}
       ${bar('노후도 (30년+ 비율)', d.nohu, 100, GCOL[d.grade])}
       ${bar('저층 비율 (1~3층)', d.lowrise, 100, '#22c55e')}
       <div class="dmetrics">

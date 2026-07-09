@@ -185,6 +185,15 @@ body{
 .dscore{display:flex; align-items:baseline; gap:8px; margin:14px 0}
 .dscore .big{font-size:40px; font-weight:800; line-height:1}
 .dscore .lbl{font-size:12px; color:var(--mut)}
+/* 동 상세 - 이 동의 정비사업 */
+.dproj{margin:12px 0; padding:12px 14px; background:var(--panel2); border:1px solid var(--line); border-radius:11px}
+.dproj-h{font-size:12px; font-weight:700; color:var(--txt); margin-bottom:9px}
+.dproj-row{display:flex; align-items:center; gap:8px; margin:6px 0; font-size:12.5px}
+.dproj-stage{flex-shrink:0; color:#fff; font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:6px; white-space:nowrap}
+.dproj-name{color:var(--mut); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.dproj-more{font-size:11px; color:var(--mut); margin-top:4px}
+.dproj.none{color:var(--mut); font-size:12.5px}
+.dproj.none b{color:#b45309}
 .dmetrics{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:16px 0}
 .metric{background:var(--panel2); border:1px solid var(--line); border-radius:10px; padding:11px 13px}
 .metric .mk{font-size:11px; color:var(--mut)}
