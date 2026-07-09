@@ -66,6 +66,9 @@ const $ = s => document.querySelector(s);
 const naverLink = (lat, lng) => `https://new.land.naver.com/houses?ms=${lat},${lng},16`;
 const naverBtn = (lat, lng) =>
   `<a class="dbtn naver" href="${naverLink(lat, lng)}" target="_blank" rel="noopener">🔗 네이버 부동산 · 이 지역 매물 보기</a>`;
+// 사업 상세(세대수·시공사·용적률) 네이버 검색 — 대량수집 불가 데이터라 검색으로 연결
+const naverSearchBtn = (q) =>
+  `<a class="dbtn search" href="https://search.naver.com/search.naver?query=${encodeURIComponent(q + ' 재개발 세대수 시공사')}" target="_blank" rel="noopener">🔎 세대수·용적률·시공사 검색</a>`;
 
 // ---------- load ----------
 const noCache = { cache: 'no-store' };   // 데이터 갱신이 즉시 반영되도록 캐시 우회
@@ -304,8 +307,9 @@ function showZoneDetail(p){
         <div class="metric"><div class="mk">사업 유형</div><div class="mv" style="font-size:14px">${p.type||'-'}</div></div>
         <div class="metric"><div class="mk">위치</div><div class="mv" style="font-size:14px">${p.gu} ${p.dong||''}</div></div>
       </div>
+      ${naverSearchBtn(p.name || `${p.gu} ${p.dong}`)}
       ${naverBtn(p.lat, p.lng)}
-      <div class="disclaimer">서울 정비사업 정보몽땅 기준 진행단계입니다. 조합·시공사·일정 등 최신 세부는 자치구·조합 고시를 별도 확인하세요.</div>
+      <div class="disclaimer">세대수·용적률·시공사는 사업시행인가 이후 확정되며 일괄 데이터가 없어 검색으로 연결합니다. 진행단계는 서울 정비사업 정보몽땅 기준이며 최신 세부는 조합·자치구 고시를 확인하세요.</div>
     </div>`;
   $('#detail').classList.remove('hidden');
 }

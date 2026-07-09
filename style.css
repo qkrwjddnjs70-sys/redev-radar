@@ -232,6 +232,8 @@ body{
 .dbtn:hover.off{border-color:var(--line)}
 .dbtn.naver{background:#03c75a; border-color:#03c75a; color:#fff; text-decoration:none}
 .dbtn.naver:hover{background:#02b350; border-color:#02b350}
+.dbtn.search{background:var(--panel2); border-color:var(--acc); color:var(--acc); text-decoration:none; margin-top:10px}
+.dbtn.search:hover{background:var(--acc); color:#fff}
 
 /* Investment sim */
 .sim{margin-top:14px; border:1px solid var(--line); border-radius:12px; overflow:hidden}
