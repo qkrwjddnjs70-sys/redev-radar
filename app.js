@@ -286,12 +286,28 @@ map.on('zoomend', () => { if (state.showSubway) renderSubway(); });
 
 // ---------- 정비사업 구역 상세 (점 클릭) ----------
 const CAT_LABEL = { recon:'🏢 재건축', redev:'🏠 재개발', moa:'🏘️ 모아타운' };
+// 뉴스로 확정된 주요 구역의 재개발 '계획' (수동 큐레이션 — 이름 부분일치). 확인되는 대로 추가.
+const CURATED_PLANS = [
+  { match:'문래동4가', units:2176, floors:49, builder:'삼성물산·대우건설', brand:'문래 네이븐', src:'2025.09 시공사 선정' },
+];
+const curatedPlan = p => CURATED_PLANS.find(c => (p.name||'').includes(c.match));
 function showZoneDetail(p){
   const b = stageBucket(p.stage), cat = catOf(p);
   const curIdx = STAGE_BUCKETS.findIndex(x => x.key === b.key);
   const steps = STAGE_BUCKETS.map((s,i) =>
     `<div class="zstep ${i<=curIdx?'done':''}" style="--c:${s.color}"><i></i><span>${s.label.split('(')[0]}</span></div>`).join('');
   // 현재(재건축 前) 단지 정보 — 기존 아파트 DB 매칭분에만, 경고 함께
+  const plan = curatedPlan(p);
+  const planHtml = plan ? `
+    <div class="plan-spec">
+      <div class="plan-h">🏗️ 재개발 계획${plan.brand?` · ${plan.brand}`:''} <span>뉴스 기준</span></div>
+      <div class="cur-grid">
+        ${plan.units?`<div><span>계획 세대수</span><b>${plan.units.toLocaleString()}세대</b></div>`:''}
+        ${plan.floors?`<div><span>최고 층수</span><b>${plan.floors}층</b></div>`:''}
+        ${plan.builder?`<div><span>시공사</span><b style="font-size:12.5px">${plan.builder}</b></div>`:''}
+      </div>
+      <div class="plan-note">📰 ${plan.src} · 조합·언론 발표 기준. 인허가 과정에서 변경될 수 있습니다.</div>
+    </div>` : '';
   const hasCur = p.cur_units || p.cur_far || p.builder;
   const curHtml = hasCur ? `
     <div class="cur-spec">
@@ -315,6 +331,7 @@ function showZoneDetail(p){
         <span class="zstage-v" style="color:${b.color}">${p.stage||'-'}</span>
       </div>
       <div class="zsteps">${steps}</div>
+      ${planHtml}
       ${curHtml}
       <div class="dmetrics">
         <div class="metric"><div class="mk">사업 유형</div><div class="mv" style="font-size:14px">${p.type||'-'}</div></div>

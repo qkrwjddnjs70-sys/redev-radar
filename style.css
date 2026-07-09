@@ -233,6 +233,11 @@ body{
 .cur-grid b{display:block; font-size:15px; margin-top:3px}
 .cur-warn{background:#fef3c7; color:#92400e; font-size:11px; line-height:1.5; padding:9px 13px; border-top:1px solid var(--line)}
 .cur-warn b{color:#78350f}
+/* 재개발 계획 (뉴스 확정) */
+.plan-spec{margin:16px 0; border:1px solid var(--acc); border-radius:12px; overflow:hidden}
+.plan-h{background:var(--acc); color:#fff; padding:10px 14px; font-size:13px; font-weight:700}
+.plan-h span{font-size:10.5px; font-weight:600; background:rgba(255,255,255,.25); padding:1px 7px; border-radius:6px; margin-left:6px}
+.plan-note{background:var(--panel2); color:var(--mut); font-size:11px; line-height:1.5; padding:9px 13px; border-top:1px solid var(--line)}
 
 /* Pinset / sim buttons inside detail */
 .dbtn{display:block; width:100%; margin-top:14px; background:var(--panel2); border:1px solid var(--line);
