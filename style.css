@@ -223,6 +223,16 @@ body{
 .zstep i{display:block; height:5px; border-radius:3px; background:var(--line); margin-bottom:5px}
 .zstep.done i{background:var(--c)}
 .zstep span{display:block; line-height:1.25}
+/* 현재(재건축 前) 단지 정보 + 경고 */
+.cur-spec{margin:16px 0; border:1px solid var(--line); border-radius:12px; overflow:hidden}
+.cur-h{background:var(--panel2); padding:10px 14px; font-size:12.5px; font-weight:700}
+.cur-h span{font-size:10.5px; font-weight:600; color:#fff; background:var(--mut); padding:1px 7px; border-radius:6px; margin-left:6px}
+.cur-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:1px; background:var(--line)}
+.cur-grid > div{background:var(--panel); padding:11px 10px; text-align:center}
+.cur-grid span{display:block; font-size:10.5px; color:var(--mut)}
+.cur-grid b{display:block; font-size:15px; margin-top:3px}
+.cur-warn{background:#fef3c7; color:#92400e; font-size:11px; line-height:1.5; padding:9px 13px; border-top:1px solid var(--line)}
+.cur-warn b{color:#78350f}
 
 /* Pinset / sim buttons inside detail */
 .dbtn{display:block; width:100%; margin-top:14px; background:var(--panel2); border:1px solid var(--line);

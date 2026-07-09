@@ -291,6 +291,18 @@ function showZoneDetail(p){
   const curIdx = STAGE_BUCKETS.findIndex(x => x.key === b.key);
   const steps = STAGE_BUCKETS.map((s,i) =>
     `<div class="zstep ${i<=curIdx?'done':''}" style="--c:${s.color}"><i></i><span>${s.label.split('(')[0]}</span></div>`).join('');
+  // 현재(재건축 前) 단지 정보 — 기존 아파트 DB 매칭분에만, 경고 함께
+  const hasCur = p.cur_units || p.cur_far || p.builder;
+  const curHtml = hasCur ? `
+    <div class="cur-spec">
+      <div class="cur-h">📐 현재 단지 정보 <span>재건축 前</span></div>
+      <div class="cur-grid">
+        ${p.cur_units?`<div><span>현 세대수</span><b>${p.cur_units.toLocaleString()}세대</b></div>`:''}
+        ${p.cur_far?`<div><span>현 용적률</span><b>${p.cur_far}%</b></div>`:''}
+        ${p.builder?`<div><span>최초 시공사</span><b>${p.builder}</b></div>`:''}
+      </div>
+      <div class="cur-warn">⚠️ <b>재건축 前 기존 아파트</b> 수치입니다(신축 계획 아님). 재건축 후 세대수·시공사는 아래 검색으로 확인하세요.</div>
+    </div>` : '';
   $('#detailBody').innerHTML = `
     <div class="dbody">
       <div class="dhead">
@@ -303,6 +315,7 @@ function showZoneDetail(p){
         <span class="zstage-v" style="color:${b.color}">${p.stage||'-'}</span>
       </div>
       <div class="zsteps">${steps}</div>
+      ${curHtml}
       <div class="dmetrics">
         <div class="metric"><div class="mk">사업 유형</div><div class="mv" style="font-size:14px">${p.type||'-'}</div></div>
         <div class="metric"><div class="mk">위치</div><div class="mv" style="font-size:14px">${p.gu} ${p.dong||''}</div></div>
