@@ -41,6 +41,7 @@ const state = {
   nohu: 70, walk: 30, far: 200, q: '', sort: 'score', sel: null,
   showProjects: false, projCat: 'all', moaZone: false, showSubway: true,
   mode: 'dong',   // 'dong' | 'moa'
+  compare: [],    // 비교 담은 동 key 목록 (최대 4)
 };
 
 const map = L.map('map', { zoomControl:true, attributionControl:false }).setView([37.5512, 126.9882], 11);
@@ -365,6 +366,91 @@ function bar(label, val, max, color){
     <div class="bartrack"><div class="barfill" style="width:${pct}%;background:${color}"></div></div></div>`;
 }
 
+// ---------- 딥분석 (순위·백분위·강약점) ----------
+function pctile(v, arr){ if (v==null) return null; let c=0; for (const x of arr) if (x<v) c++; return Math.round(c/arr.length*100); }
+function pctTag(pct){ return pct>=75 ? ['우수','#16a34a'] : pct>=45 ? ['보통','#ca8a04'] : ['미흡','#dc2626']; }
+function deepDiveHtml(d){
+  const A = state.all;
+  const guArr = A.filter(x=>x.gu===d.gu).map(x=>x.score);
+  const rank = 1 + guArr.filter(s=>s>d.score).length;
+  const pctScore = pctile(d.score, A.map(x=>x.score));
+  const farOk = d.est_far!=null && d.est_far>=30;
+  const rows = [
+    ['노후도',        `${fmt(d.nohu)}%`,   pctile(d.nohu, A.map(x=>x.nohu))],
+    ['저층 여력',     `${fmt(d.lowrise)}%`, pctile(d.lowrise, A.map(x=>x.lowrise))],
+    ['역세권',        d.walk_min!=null?`${d.walk_min}분`:'—', d.walk_min!=null?pctile(-d.walk_min, A.filter(x=>x.walk_min!=null).map(x=>-x.walk_min)):null],
+    ['저밀도(사업성)', farOk?`${fmt(d.est_far)}%`:'저밀', farOk?pctile(-d.est_far, A.filter(x=>x.est_far!=null&&x.est_far>=30).map(x=>-x.est_far)):null],
+  ];
+  return `<div class="deep">
+    <div class="deep-h">🔬 딥분석</div>
+    <div class="deep-rank">
+      <div><span>${d.gu} 내 순위</span><b>${rank}<small>위 / ${guArr.length}동</small></b></div>
+      <div><span>서울 전체</span><b>상위 ${Math.max(1,100-pctScore)}%</b></div>
+    </div>
+    ${rows.map(([k,disp,pct]) => {
+      if (pct==null) return `<div class="deep-m"><div class="dm-top"><span>${k}</span><span class="mut">${disp}</span></div></div>`;
+      const [t,c] = pctTag(pct);
+      return `<div class="deep-m"><div class="dm-top"><span>${k} <b style="color:${c}">${t}</b></span><span class="mut">${disp} · 상위${100-pct}%</span></div>
+        <div class="dm-bar"><div class="dm-fill" style="width:${pct}%;background:${c}"></div></div></div>`;
+    }).join('')}
+  </div>`;
+}
+
+// ---------- 비교분석 (여러 동 담아 표+레이더) ----------
+function addToCompare(k){
+  if (state.compare.includes(k)) { renderCompareBar('이미 담김'); return; }
+  if (state.compare.length >= 4) { renderCompareBar('최대 4개'); return; }
+  state.compare.push(k); renderCompareBar();
+}
+function renderCompareBar(msg){
+  const b = $('#compareBar');
+  b.classList.toggle('hidden', state.compare.length===0);
+  $('#cmpCount').textContent = msg || `⚖️ 비교 담긴 동 ${state.compare.length}개`;
+}
+function compareTable(ds){
+  const rows = [
+    ['종합점수', d=>Math.round(d.score), true],
+    ['등급',     d=>`<b class="g-${d.grade}">${d.grade}</b>`],
+    ['노후도',   d=>fmt(d.nohu)+'%', true],
+    ['저층비율', d=>fmt(d.lowrise)+'%', true],
+    ['평균연식', d=>fmt(d.avg_age)+'년', true],
+    ['추정용적률', d=>(d.est_far!=null&&d.est_far>=30)?fmt(d.est_far)+'%':'저밀'],
+    ['역세권',   d=>d.walk_min!=null?d.walk_min+'분':'—'],
+    ['정비상태', d=>`<span class="vtag v${d.verdict}">${d.verdict}</span>`],
+  ];
+  return `<table class="cmp-tbl"><thead><tr><th></th>${ds.map(d=>`<th>${d.dong}<small>${d.gu}</small></th>`).join('')}</tr></thead>
+    <tbody>${rows.map(([k,fn,hi])=>{
+      let best=-Infinity; if(hi) ds.forEach(d=>{const v=parseFloat(fn(d)); if(v>best)best=v;});
+      return `<tr><td class="ck">${k}</td>${ds.map(d=>{const raw=fn(d); const v=parseFloat(raw); const top=hi&&v===best&&ds.length>1;
+        return `<td class="${top?'best':''}">${raw}</td>`;}).join('')}</tr>`;
+    }).join('')}</tbody></table>`;
+}
+function compareRadar(ds){
+  const axes = [
+    ['노후도', d=>d.nohu||0], ['저층', d=>d.lowrise||0],
+    ['역세권', d=>d.walk_min!=null?Math.max(0,(30-d.walk_min)/30*100):0],
+    ['저밀', d=>(d.est_far!=null&&d.est_far>=30)?Math.max(0,(400-Math.min(d.est_far,400))/400*100):50],
+    ['점수', d=>d.score||0],
+  ];
+  const CL=['#ef4444','#2563eb','#16a34a','#a855f7'], cx=140,cy=145,R=100,n=axes.length;
+  const pt=(i,r)=>[(cx+r*Math.sin(i/n*2*Math.PI)).toFixed(1),(cy-r*Math.cos(i/n*2*Math.PI)).toFixed(1)];
+  let s=`<svg viewBox="0 0 280 300" class="cmp-radar">`;
+  for(let g=1;g<=4;g++){ s+=`<polygon points="${axes.map((_,i)=>pt(i,R*g/4).join(',')).join(' ')}" fill="none" stroke="var(--line)"/>`; }
+  axes.forEach((a,i)=>{ const[x,y]=pt(i,R); s+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="var(--line)"/>`;
+    const[lx,ly]=pt(i,R+18); s+=`<text x="${lx}" y="${ly}" font-size="11" fill="var(--mut)" text-anchor="middle" dominant-baseline="middle">${a[0]}</text>`; });
+  ds.forEach((d,di)=>{ const c=CL[di];
+    s+=`<polygon points="${axes.map((a,i)=>pt(i,R*Math.min(100,a[1](d))/100).join(',')).join(' ')}" fill="${c}33" stroke="${c}" stroke-width="2"/>`; });
+  s+=`</svg>`;
+  return `<div class="cmp-radar-wrap">${s}<div class="cmp-leg">${ds.map((d,i)=>`<span><i style="background:${CL[i]}"></i>${d.dong}</span>`).join('')}</div></div>`;
+}
+function openCompare(){
+  const ds = state.compare.map(k=>state.all.find(x=>key(x)===k)).filter(Boolean);
+  if(!ds.length) return;
+  $('#cmpBody').innerHTML = `<h2>⚖️ 구역 비교 <span class="dsub" style="font-weight:400">${ds.length}개 동</span></h2>` +
+    compareRadar(ds) + compareTable(ds);
+  $('#compareModal').classList.remove('hidden');
+}
+
 function showDetail(d){
   const gridKey = `${d.sgg}_${d.bjd}`;
   const hasGrid = PINSET_AVAILABLE.has(gridKey);
@@ -401,7 +487,9 @@ function showDetail(d){
         <div class="metric"><div class="mk">건물 수</div><div class="mv">${d.buildings}<small>동${d.sampled?` · 표본 ${d.sampled}중 ${d.old} 노후` : ` · ${d.old} 노후`}</small></div></div>
         <div class="metric"><div class="mk">평균 경사</div><div class="mv">${slope}</div></div>
       </div>
+      ${deepDiveHtml(d)}
       ${note}
+      <button class="dbtn cmp" id="cmpAddBtn">⚖️ 이 동을 비교에 담기</button>
       ${naverBtn(d.lat, d.lng)}
       <button class="dbtn ${hasGrid?'':'off'}" id="gridBtn" ${hasGrid?'':'disabled'}>
         ${hasGrid ? '🔬 블록정밀 격자 보기 (100m)' : '🔬 블록정밀 — 이 동은 캐시 없음(백엔드 필요)'}
@@ -414,6 +502,7 @@ function showDetail(d){
     </div>`;
   $('#detail').classList.remove('hidden');
   if (hasGrid) $('#gridBtn').addEventListener('click', () => loadGrid(gridKey, d));
+  $('#cmpAddBtn').addEventListener('click', () => addToCompare(key(d)));
   bindSim(d);
 }
 
@@ -674,6 +763,10 @@ function bindUI(){
   mq.addEventListener('change', () => { placeControls(); if (state.showSubway) renderSubway(); });
   $('#dashBtn').addEventListener('click', openDash);
   $('#dashClose').addEventListener('click', () => $('#dash').classList.add('hidden'));
+  $('#cmpOpen').addEventListener('click', openCompare);
+  $('#cmpClear').addEventListener('click', () => { state.compare=[]; renderCompareBar(); });
+  $('#cmpClose').addEventListener('click', () => $('#compareModal').classList.add('hidden'));
+  $('#compareModal').addEventListener('click', e => { if (e.target.id==='compareModal') $('#compareModal').classList.add('hidden'); });
   $('#dash').addEventListener('click', e => { if (e.target.id==='dash') $('#dash').classList.add('hidden'); });
 }
 

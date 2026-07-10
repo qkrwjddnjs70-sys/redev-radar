@@ -239,6 +239,44 @@ body{
 .plan-h span{font-size:10.5px; font-weight:600; background:rgba(255,255,255,.25); padding:1px 7px; border-radius:6px; margin-left:6px}
 .plan-note{background:var(--panel2); color:var(--mut); font-size:11px; line-height:1.5; padding:9px 13px; border-top:1px solid var(--line)}
 
+/* 딥분석 */
+.deep{margin:16px 0; border:1px solid var(--line); border-radius:12px; padding:14px}
+.deep-h{font-size:13px; font-weight:700; margin-bottom:10px}
+.deep-rank{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px}
+.deep-rank > div{background:var(--panel2); border-radius:9px; padding:10px 12px}
+.deep-rank span{font-size:11px; color:var(--mut)}
+.deep-rank b{display:block; font-size:20px; font-weight:800; margin-top:2px}
+.deep-rank b small{font-size:11px; color:var(--mut); font-weight:500}
+.deep-m{margin:9px 0}
+.dm-top{display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px}
+.dm-top .mut{color:var(--mut)}
+.dm-bar{height:7px; background:var(--panel2); border-radius:5px; overflow:hidden}
+.dm-fill{height:100%; border-radius:5px}
+
+/* 비교 바 */
+.cmpbar{position:fixed; bottom:18px; left:50%; transform:translateX(-50%); z-index:1500;
+  background:var(--acc); color:#fff; border-radius:30px; padding:9px 10px 9px 18px; display:flex;
+  align-items:center; gap:12px; box-shadow:0 6px 20px rgba(37,99,235,.4)}
+.cmpbar.hidden{display:none}
+.cmpbar #cmpCount{font-size:13px; font-weight:700}
+.cmpbar button{background:rgba(255,255,255,.2); border:none; color:#fff; border-radius:20px;
+  padding:7px 14px; font-size:13px; font-weight:700; cursor:pointer}
+.cmpbar #cmpClear{padding:7px 11px}
+.cmpbar button:hover{background:rgba(255,255,255,.35)}
+
+/* 비교 표 + 레이더 */
+.cmp-radar-wrap{text-align:center; margin:8px 0 16px}
+.cmp-radar{width:280px; max-width:100%; height:auto}
+.cmp-leg{display:flex; justify-content:center; gap:14px; flex-wrap:wrap; font-size:12px; margin-top:4px}
+.cmp-leg span{display:flex; align-items:center; gap:5px}
+.cmp-leg i{width:11px; height:11px; border-radius:3px; display:inline-block}
+.cmp-tbl{width:100%; border-collapse:collapse; font-size:13px}
+.cmp-tbl th,.cmp-tbl td{border:1px solid var(--line); padding:8px 10px; text-align:center}
+.cmp-tbl thead th{background:var(--panel2); font-size:12px}
+.cmp-tbl thead th small{display:block; font-size:10px; color:var(--mut); font-weight:400}
+.cmp-tbl .ck{text-align:left; color:var(--mut); font-size:12px; background:var(--panel2)}
+.cmp-tbl td.best{background:#dbeafe; font-weight:800; color:var(--acc)}
+
 /* Pinset / sim buttons inside detail */
 .dbtn{display:block; width:100%; margin-top:14px; background:var(--panel2); border:1px solid var(--line);
   color:var(--txt); padding:11px; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer; text-align:center}
@@ -249,6 +287,8 @@ body{
 .dbtn.naver:hover{background:#02b350; border-color:#02b350}
 .dbtn.search{background:var(--panel2); border-color:var(--acc); color:var(--acc); text-decoration:none; margin-top:10px}
 .dbtn.search:hover{background:var(--acc); color:#fff}
+.dbtn.cmp{background:var(--panel2); border-color:var(--mut); color:var(--txt)}
+.dbtn.cmp:hover{border-color:var(--acc); color:var(--acc)}
 
 /* Investment sim */
 .sim{margin-top:14px; border:1px solid var(--line); border-radius:12px; overflow:hidden}

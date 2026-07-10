@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://unpkg.com" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-  <link rel="stylesheet" href="./style.css?v=27" />
+  <link rel="stylesheet" href="./style.css?v=28" />
 </head>
 <body>
   <div id="app">
@@ -124,6 +124,19 @@
     </div>
   </div>
 
+  <!-- 비교 바 + 모달 -->
+  <div id="compareBar" class="cmpbar hidden">
+    <span id="cmpCount"></span>
+    <button id="cmpOpen">비교하기 ⚖️</button>
+    <button id="cmpClear" title="비우기">✕</button>
+  </div>
+  <div id="compareModal" class="dash hidden">
+    <div class="dash-card">
+      <button id="cmpClose" class="dclose">✕</button>
+      <div id="cmpBody"></div>
+    </div>
+  </div>
+
   <!-- Dashboard modal -->
   <div id="dash" class="dash hidden">
     <div class="dash-card">
@@ -140,6 +153,6 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script src="./app.js?v=27"></script>
+  <script src="./app.js?v=28"></script>
 </body>
 </html>
