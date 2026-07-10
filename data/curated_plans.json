@@ -1,0 +1,162 @@
+[
+ {
+  "match": "문래동4가",
+  "units": 2176,
+  "floors": 49,
+  "builder": "삼성물산·대우건설",
+  "brand": "문래 네이븐",
+  "src": "2025.09 시공사 선정"
+ },
+ {
+  "match": "반포주공1단지",
+  "units": 5022,
+  "floors": 35,
+  "builder": "현대건설",
+  "brand": "디에이치 클래스트",
+  "src": "착공(2024)"
+ },
+ {
+  "match": "이문1재정비촉진",
+  "units": 3069,
+  "floors": 27,
+  "builder": "삼성물산",
+  "brand": "래미안 라그란데",
+  "src": "2025 입주"
+ },
+ {
+  "match": "방배5구역",
+  "units": 3064,
+  "floors": 33,
+  "builder": "현대건설",
+  "brand": "디에이치 방배",
+  "src": "2024 분양"
+ },
+ {
+  "match": "남성아파트",
+  "units": 488,
+  "floors": 28,
+  "builder": "한화 건설부문",
+  "brand": "포레나 문래",
+  "src": "한화 시공사 선정"
+ },
+ {
+  "match": "노량진1재정비촉진",
+  "units": 2992,
+  "floors": null,
+  "builder": "포스코이앤씨",
+  "brand": "오티에르",
+  "src": "관리처분인가"
+ },
+ {
+  "match": "노량진2재정비촉진",
+  "units": 411,
+  "floors": null,
+  "builder": "GS건설·SK에코플랜트",
+  "brand": "드파인",
+  "src": "착공 예정"
+ },
+ {
+  "match": "노량진3재정비촉진",
+  "units": 1250,
+  "floors": 49,
+  "builder": "포스코이앤씨",
+  "brand": null,
+  "src": "관리처분인가"
+ },
+ {
+  "match": "노량진4재정비촉진",
+  "units": 404,
+  "floors": 45,
+  "builder": "현대건설",
+  "brand": null,
+  "src": "관리처분인가"
+ },
+ {
+  "match": "노량진5재정비촉진",
+  "units": null,
+  "floors": null,
+  "builder": "대우건설",
+  "brand": null,
+  "src": "관리처분인가"
+ },
+ {
+  "match": "노량진6재정비촉진",
+  "units": 1499,
+  "floors": 28,
+  "builder": "GS건설·SK에코플랜트",
+  "brand": "라 클라쎄 자이 더 핀클",
+  "src": "착공(2025)"
+ },
+ {
+  "match": "노량진7재정비촉진",
+  "units": null,
+  "floors": null,
+  "builder": "SK에코플랜트",
+  "brand": null,
+  "src": "관리처분인가"
+ },
+ {
+  "match": "노량진8재정비촉진",
+  "units": null,
+  "floors": null,
+  "builder": "DL이앤씨",
+  "brand": null,
+  "src": "분양"
+ },
+ {
+  "match": "흑석3재정비촉진",
+  "units": 1772,
+  "floors": null,
+  "builder": "GS건설",
+  "brand": "아크로 리버하임",
+  "src": "2023 입주"
+ },
+ {
+  "match": "흑석9재정비촉진",
+  "units": 1540,
+  "floors": 25,
+  "builder": "현대건설",
+  "brand": "디에이치 켄트로나인",
+  "src": "착공"
+ },
+ {
+  "match": "흑석11재정비촉진",
+  "units": 1511,
+  "floors": null,
+  "builder": "대우건설",
+  "brand": null,
+  "src": "착공 예정"
+ },
+ {
+  "match": "청량리제7구역",
+  "units": 761,
+  "floors": null,
+  "builder": "롯데건설",
+  "brand": "롯데캐슬 하이루체",
+  "src": "2026 입주"
+ },
+ {
+  "match": "청량리제8구역",
+  "units": 610,
+  "floors": 24,
+  "builder": "GS건설",
+  "brand": null,
+  "src": "관리처분인가"
+ },
+ {
+  "match": "개포주공4단지",
+  "units": 3256,
+  "floors": 35,
+  "builder": "GS건설",
+  "brand": null,
+  "src": "준공"
+ },
+ {
+  "match": "개포주공5단지",
+  "units": 1279,
+  "floors": 35,
+  "builder": "대우건설",
+  "brand": "개포써밋187",
+  "src": "관리처분인가"
+ }
+]

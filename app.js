@@ -27,7 +27,10 @@ const RESI_CAT = {
   '재건축':'recon', '지역주택':'recon', '리모델링':'recon',            // 🏢 재건축(아파트)
   '재개발(주택정비형)':'redev', '재개발(도시정비형)':'redev',          // 🏠 재개발(주택+역세권·재정비촉진·공공재개발)
 };
-const catOf = p => RESI_CAT[p.type] || ((p.name || '').includes('모아') ? 'moa' : null);
+// 아파트가 안 올라가는 비주거(업무·오피스·지식산업) 제외
+const NON_APT = /업무지구|오피스|지식산업/;
+const catOf = p => NON_APT.test(p.name || '') ? null
+  : (RESI_CAT[p.type] || ((p.name || '').includes('모아') ? 'moa' : null));
 const isResi = p => catOf(p) !== null;
 const MOA_TYPES = new Set(['가로주택정비', '소규모재건축', '소규모재개발']);
 const isMoa = p => catOf(p) === 'moa';
@@ -78,7 +81,9 @@ Promise.all([
   fetch('./data/redev_points.json', noCache).then(r => r.json()).catch(() => []),
   fetch('./data/subway.json', noCache).then(r => r.json()).catch(() => null),
   fetch('./data/moa_zones.json', noCache).then(r => r.json()).catch(() => []),
-]).then(([j, proj, sub, zones]) => {
+  fetch('./data/curated_plans.json', noCache).then(r => r.json()).catch(() => []),
+]).then(([j, proj, sub, zones, plans]) => {
+  CURATED_PLANS = plans || [];
   state.all = j.dongs.filter(d => d.lat && d.lng);
   state.projects = (proj || []).filter(p => p.lat && p.lng);
   state.subway = sub;
@@ -287,14 +292,8 @@ map.on('zoomend', () => { if (state.showSubway) renderSubway(); });
 
 // ---------- 정비사업 구역 상세 (점 클릭) ----------
 const CAT_LABEL = { recon:'🏢 재건축', redev:'🏠 재개발', moa:'🏘️ 모아타운' };
-// 뉴스로 확정된 주요 구역의 재개발 '계획' (수동 큐레이션 — 이름 부분일치). 확인되는 대로 추가.
-const CURATED_PLANS = [
-  { match:'문래동4가',   units:2176, floors:49, builder:'삼성물산·대우건설', brand:'문래 네이븐',     src:'2025.09 시공사 선정' },
-  { match:'반포주공1단지', units:5022, floors:35, builder:'현대건설',        brand:'디에이치 클래스트', src:'착공(2024)' },
-  { match:'이문1재정비촉진', units:3069, floors:27, builder:'삼성물산',       brand:'래미안 라그란데',  src:'2025 입주' },
-  { match:'방배5구역',   units:3064, floors:33, builder:'현대건설',          brand:'디에이치 방배',    src:'2024 분양' },
-  { match:'남성아파트',   units:488,  floors:28, builder:'한화 건설부문',      brand:'포레나 문래',      src:'한화 시공사 선정' },
-];
+// 뉴스로 확정된 주요 구역의 재개발 '계획' (data/curated_plans.json, 이름 부분일치)
+let CURATED_PLANS = [];
 const curatedPlan = p => CURATED_PLANS.find(c => (p.name||'').includes(c.match));
 function showZoneDetail(p){
   const b = stageBucket(p.stage), cat = catOf(p);
