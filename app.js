@@ -82,8 +82,10 @@ Promise.all([
   fetch('./data/subway.json', noCache).then(r => r.json()).catch(() => null),
   fetch('./data/moa_zones.json', noCache).then(r => r.json()).catch(() => []),
   fetch('./data/curated_plans.json', noCache).then(r => r.json()).catch(() => []),
-]).then(([j, proj, sub, zones, plans]) => {
+  fetch('./data/deals_by_dong.json', noCache).then(r => r.json()).catch(() => null),
+]).then(([j, proj, sub, zones, plans, deals]) => {
   CURATED_PLANS = plans || [];
+  state.deals = deals;
   state.all = j.dongs.filter(d => d.lat && d.lng);
   state.projects = (proj || []).filter(p => p.lat && p.lng);
   state.subway = sub;
@@ -325,6 +327,7 @@ function showZoneDetail(p){
       </div>
       <div class="zsteps">${steps}</div>
       ${planHtml}
+      ${dealsHtml(p.gu, p.dong)}
       <div class="dmetrics">
         <div class="metric"><div class="mk">사업 유형</div><div class="mv" style="font-size:14px">${p.type||'-'}</div></div>
         <div class="metric"><div class="mk">위치</div><div class="mv" style="font-size:14px">${p.gu} ${p.dong||''}</div></div>
@@ -392,6 +395,28 @@ function deepDiveHtml(d){
       return `<div class="deep-m"><div class="dm-top"><span>${k} <b style="color:${c}">${t}</b></span><span class="mut">${disp} · 상위${100-pct}%</span></div>
         <div class="dm-bar"><div class="dm-fill" style="width:${pct}%;background:${c}"></div></div></div>`;
     }).join('')}
+  </div>`;
+}
+
+// ---------- 동네 아파트 실거래 (국토부, 법정동 집계) ----------
+function dealsFor(gu, dong){
+  const g = state.deals && state.deals.gu[gu];
+  if (!g) return null;
+  if (g[dong]) return g[dong];
+  const k = Object.keys(g).find(x => dong.startsWith(x) || x.startsWith(dong));
+  return k ? g[k] : null;
+}
+function dealsHtml(gu, dong){
+  const d = dealsFor(gu, dong);
+  if (!d || !d.n) return '';
+  return `<div class="deals">
+    <div class="deals-h">💰 ${dong} 아파트 실거래 <span>최근 3개월 · ${d.n}건</span></div>
+    <div class="cur-grid">
+      ${d.p84?`<div><span>84㎡급 중앙</span><b>${d.p84}억</b></div>`:''}
+      <div><span>전체 중앙값</span><b>${d.med}억</b></div>
+      <div><span>거래 범위</span><b style="font-size:13px">${d.min}~${d.max}억</b></div>
+    </div>
+    <div class="deals-note">📊 국토부 실거래가 ${state.deals.updated} 기준 · <b>동네 아파트 전체</b> 참고치(재개발 구역 자체 거래 아님). 정확한 매물·시세는 아래 링크로 확인.</div>
   </div>`;
 }
 
@@ -486,6 +511,7 @@ function showDetail(d){
         <div class="metric"><div class="mk">건물 수</div><div class="mv">${d.buildings}<small>동${d.sampled?` · 표본 ${d.sampled}중 ${d.old} 노후` : ` · ${d.old} 노후`}</small></div></div>
         <div class="metric"><div class="mk">평균 경사</div><div class="mv">${slope}</div></div>
       </div>
+      ${dealsHtml(d.gu, d.dong)}
       ${deepDiveHtml(d)}
       ${note}
       <button class="dbtn cmp" id="cmpAddBtn">⚖️ 이 동을 비교에 담기</button>

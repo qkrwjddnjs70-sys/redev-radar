@@ -238,6 +238,12 @@ body{
 .plan-h{background:var(--acc); color:#fff; padding:10px 14px; font-size:13px; font-weight:700}
 .plan-h span{font-size:10.5px; font-weight:600; background:rgba(255,255,255,.25); padding:1px 7px; border-radius:6px; margin-left:6px}
 .plan-note{background:var(--panel2); color:var(--mut); font-size:11px; line-height:1.5; padding:9px 13px; border-top:1px solid var(--line)}
+/* 동네 실거래 */
+.deals{margin:16px 0; border:1px solid #16a34a55; border-radius:12px; overflow:hidden}
+.deals-h{background:#dcfce7; color:#166534; padding:10px 14px; font-size:13px; font-weight:700}
+.deals-h span{font-size:10.5px; font-weight:600; color:#166534; opacity:.8; margin-left:6px}
+.deals-note{background:var(--panel2); color:var(--mut); font-size:11px; line-height:1.5; padding:9px 13px; border-top:1px solid var(--line)}
+.deals-note b{color:var(--txt)}
 
 /* 딥분석 */
 .deep{margin:16px 0; border:1px solid var(--line); border-radius:12px; padding:14px}
