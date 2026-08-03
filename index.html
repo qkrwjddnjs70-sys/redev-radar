@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://unpkg.com" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-  <link rel="stylesheet" href="./style.css?v=30" />
+  <link rel="stylesheet" href="./style.css?v=31" />
 </head>
 <body>
   <div id="app">
@@ -95,6 +95,10 @@
           <button data-c="moa">🏘️ 모아</button>
         </div>
         <label class="ctoggle sub hidden" id="moaZoneWrap"><input type="checkbox" id="moaZone"> 🔵 구역으로 묶기 <b id="moaZoneN">34</b></label>
+        <div id="colorBy" class="projcat seg hidden">
+          <button data-cb="stage" class="active">🎨 진행단계</button>
+          <button data-cb="method">🎨 추진방식</button>
+        </div>
         <div id="stageLegend" class="stagelegend hidden"></div>
         <label class="ctoggle sep"><input type="checkbox" id="subwayToggle" checked> 🚇 지하철 노선도</label>
       </div>
@@ -153,6 +157,6 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script src="./app.js?v=30"></script>
+  <script src="./app.js?v=31"></script>
 </body>
 </html>

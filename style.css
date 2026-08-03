@@ -186,6 +186,7 @@ body{
 .dhead .gbadge{width:44px; height:44px; font-size:20px; border-radius:11px}
 .dhead h2{font-size:22px; font-weight:800}
 .dhead .dgu{font-size:13px; color:var(--mut)}
+.mtag{display:inline-block; color:#fff; font-size:10.5px; font-weight:700; padding:1px 7px; border-radius:6px; margin-left:4px; vertical-align:middle}
 .dscore{display:flex; align-items:baseline; gap:8px; margin:14px 0}
 .dscore .big{font-size:40px; font-weight:800; line-height:1}
 .dscore .lbl{font-size:12px; color:var(--mut)}

@@ -20,6 +20,25 @@ function stageBucket(stage){
   return STAGE_BUCKETS[0];
 }
 
+// 추진방식(사업종류) 분류 — 이름/유형에서 추출. 신통·공공은 이름에 명시됨
+const METHODS = [
+  { key:'신통',     label:'신통기획',        color:'#ef4444', test:n=>/신속통합|신통기획/.test(n) },
+  { key:'공공재개발', label:'공공재개발',      color:'#2563eb', test:n=>n.includes('공공재개발') },
+  { key:'공공재건축', label:'공공재건축',      color:'#1d4ed8', test:n=>n.includes('공공재건축') },
+  { key:'도심공공',   label:'도심공공복합',    color:'#16a34a', test:n=>/도심\s?공공/.test(n) },
+  { key:'역세권',     label:'역세권 장기전세', color:'#f59e0b', test:n=>n.includes('역세권')&&n.includes('장기전세') },
+  { key:'촉진',       label:'재정비촉진(뉴타운)', color:'#a855f7', test:n=>/재정비촉진|촉진구역/.test(n) },
+];
+function methodOf(p){
+  const n = p.name || '';
+  for (const m of METHODS) if (m.test(n)) return m;
+  const t = p.type;
+  if (['가로주택정비','소규모재건축','소규모재개발'].includes(t) || n.includes('모아')) return { key:'모아', label:'모아타운·소규모', color:'#0e7490' };
+  if (t === '지역주택') return { key:'지주택', label:'지역주택조합', color:'#ca8a04' };
+  if (t === '리모델링') return { key:'리모델링', label:'리모델링', color:'#94a3b8' };
+  return { key:'민간', label:'민간정비', color:'#64748b' };
+}
+
 // 주거단지 재개발/재건축만 대상 — 도심상업·도시정비형(업무/상업) 제외
 // 유형 → 카테고리 (mutually exclusive). null = 비주거(제외)
 const RESI_CAT = {
@@ -45,6 +64,7 @@ const state = {
   showProjects: false, projCat: 'all', moaZone: false, showSubway: true,
   mode: 'dong',   // 'dong' | 'moa'
   compare: [],    // 비교 담은 동 key 목록 (최대 4)
+  colorBy: 'stage', // 정비사업 점 색상 기준: 'stage'(진행단계) | 'method'(추진방식)
 };
 
 const map = L.map('map', { zoomControl:true, attributionControl:false }).setView([37.5512, 126.9882], 11);
@@ -97,7 +117,7 @@ Promise.all([
   $('#moaZoneN').textContent = state.moaZones.filter(z => z.n >= 2).length;
   $('#moaModeN').textContent = state.moaZones.length;
   resetControls();
-  initGuOptions(); buildStageLegend(); bindUI(); apply();
+  initGuOptions(); renderLegend(); bindUI(); apply();
   renderSubway();   // 지하철 노선도 기본 표시
 }).catch(e => { $('#list').innerHTML = `<li style="padding:20px;color:#f87171">데이터 로드 실패: ${e}</li>`; });
 
@@ -204,6 +224,7 @@ function renderProjects(){
   const on = state.showProjects;
   $('#stageLegend').classList.toggle('hidden', !on);
   $('#projCat').classList.toggle('hidden', !on);
+  $('#colorBy').classList.toggle('hidden', !on);
   const zoneable = on && state.projCat==='moa';
   $('#moaZoneWrap').classList.toggle('hidden', !zoneable);
   const resiTotal = state.projects.filter(isResi).length;
@@ -218,15 +239,31 @@ function renderProjects(){
   // 모아타운 카테고리: 개별 가로주택 구역 점 + 이를 묶는 모아타운 영역(원+라벨) 함께 표시
   if (zoneable && state.moaZone) renderMoaZones();
 
+  const byMethod = state.colorBy === 'method';
   list.forEach(p => {
-    const b = stageBucket(p.stage), moa = isMoa(p);
+    const b = stageBucket(p.stage), moa = isMoa(p), m = methodOf(p);
+    const fill = byMethod ? m.color : b.color;
     L.circleMarker([p.lat, p.lng], {
       radius: moa?9:8, color: moa?'#0891b2':'#0b0f14', weight: moa?2.5:1.5,
-      fillColor:b.color, fillOpacity:.95,
-    }).bindTooltip(`${p.name||'(이름없음)'}<br>${moa?'🏘️ ':''}${p.type||''} · ${p.stage||'-'}`, {direction:'top'})
+      fillColor:fill, fillOpacity:.95,
+    }).bindTooltip(`${p.name||'(이름없음)'}<br>${moa?'🏘️ ':''}${m.label} · ${p.stage||'-'}`, {direction:'top'})
       .on('click', () => showZoneDetail(p))
       .addTo(projLayer);
   });
+  renderLegend();
+}
+// 범례: 색상 기준(단계/추진방식)에 따라 갱신 — 현재 표시된 것만
+function renderLegend(){
+  const el = $('#stageLegend');
+  if (state.colorBy === 'method'){
+    const shown = new Set(state.projects.filter(p=>{const c=catOf(p);return c&&(state.projCat==='all'||c===state.projCat);}).map(p=>methodOf(p).key));
+    const items = [...METHODS, {key:'모아',label:'모아타운·소규모',color:'#0e7490'}, {key:'지주택',label:'지역주택조합',color:'#ca8a04'}, {key:'리모델링',label:'리모델링',color:'#94a3b8'}, {key:'민간',label:'민간정비',color:'#64748b'}]
+      .filter(m=>shown.has(m.key));
+    el.innerHTML = `<span class="lt">추진방식</span>` + items.map(m=>`<span><i style="background:${m.color}"></i>${m.label}</span>`).join('');
+  } else {
+    el.innerHTML = `<span class="lt">진행단계</span>` + STAGE_BUCKETS.map(b=>`<span><i style="background:${b.color}"></i>${b.label}</span>`).join('') +
+      `<span style="margin-top:2px"><i style="background:transparent;border:2px solid #0891b2"></i>🏘️ 모아타운</span>`;
+  }
 }
 
 // 모아타운 = 인접 가로주택/소규모 구역 2개+ 묶음. 점선 원 + "동명 N구역" 라벨로 관리단위 표시
@@ -319,7 +356,8 @@ function showZoneDetail(p){
       <div class="dhead">
         <div class="gbadge" style="background:${b.color};color:#fff">${(CAT_LABEL[cat]||'🏗️').slice(0,2)}</div>
         <div><h2 style="font-size:18px;line-height:1.25">${p.name||'(이름없음)'}</h2>
-          <div class="dgu">${p.gu} ${p.dong||''} · ${CAT_LABEL[cat]||p.type}</div></div>
+          <div class="dgu">${p.gu} ${p.dong||''} · ${CAT_LABEL[cat]||p.type}
+            <span class="mtag" style="background:${methodOf(p).color}">${methodOf(p).label}</span></div></div>
       </div>
       <div class="zstage" style="border-color:${b.color}">
         <span class="zstage-lbl">현재 진행 단계</span>
@@ -773,6 +811,11 @@ function bindUI(){
   });
   $('#moaZone').addEventListener('change', e => { state.moaZone=e.target.checked; renderProjects(); });
   $('#subwayToggle').addEventListener('change', e => { state.showSubway=e.target.checked; renderSubway(); });
+  $('#colorBy').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    $('#colorBy').querySelectorAll('button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); state.colorBy=b.dataset.cb; renderProjects();
+  });
   const closeSplash = () => $('#splash').classList.add('hide');
   $('#splashStart').addEventListener('click', closeSplash);
   $('#splash').addEventListener('click', e => { if (e.target.id==='splash') closeSplash(); });
