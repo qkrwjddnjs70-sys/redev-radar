@@ -65,7 +65,10 @@ const state = {
   mode: 'dong',   // 'dong' | 'moa'
   compare: [],    // 비교 담은 동 key 목록 (최대 4)
   colorBy: 'stage', // 정비사업 점 색상 기준: 'stage'(진행단계) | 'method'(추진방식)
+  stageFilter: null, methodFilter: null,  // 범례 클릭 필터(활성 key Set) — 로드 시 전체로 초기화
 };
+const STAGE_KEYS = ['plan','union','impl','mgmt','build'];
+const METHOD_KEYS = ['신통','공공재개발','공공재건축','도심공공','역세권','촉진','모아','지주택','리모델링','민간'];
 
 const map = L.map('map', { zoomControl:true, attributionControl:false }).setView([37.5512, 126.9882], 11);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom:19 }).addTo(map);
@@ -106,6 +109,7 @@ Promise.all([
 ]).then(([j, proj, sub, zones, plans, deals]) => {
   CURATED_PLANS = plans || [];
   state.deals = deals;
+  state.stageFilter = new Set(STAGE_KEYS); state.methodFilter = new Set(METHOD_KEYS);
   state.all = j.dongs.filter(d => d.lat && d.lng);
   state.projects = (proj || []).filter(p => p.lat && p.lng);
   state.subway = sub;
@@ -232,7 +236,11 @@ function renderProjects(){
   const cat = state.projCat;
   const list = state.projects.filter(p => {
     const c = catOf(p); if (!c) return false;      // 비주거 제외
-    return cat === 'all' || c === cat;
+    if (!(cat === 'all' || c === cat)) return false;
+    // 범례 필터 — 색상 기준 차원(단계/추진방식)으로 선택된 것만
+    if (state.colorBy === 'stage' && state.stageFilter && !state.stageFilter.has(stageBucket(p.stage).key)) return false;
+    if (state.colorBy === 'method' && state.methodFilter && !state.methodFilter.has(methodOf(p).key)) return false;
+    return true;
   });
   $('#projCount').textContent = list.length;
 
@@ -252,16 +260,18 @@ function renderProjects(){
   });
   renderLegend();
 }
-// 범례: 색상 기준(단계/추진방식)에 따라 갱신 — 현재 표시된 것만
+// 범례 = 필터. 항목 클릭 시 그 단계/방식만 켜고/끄기. 제목(⟲) 클릭 = 전체 복원
+const ALL_METHODS = [...METHODS, {key:'모아',label:'모아타운·소규모',color:'#0e7490'}, {key:'지주택',label:'지역주택조합',color:'#ca8a04'}, {key:'리모델링',label:'리모델링',color:'#94a3b8'}, {key:'민간',label:'민간정비',color:'#64748b'}];
 function renderLegend(){
   const el = $('#stageLegend');
   if (state.colorBy === 'method'){
     const shown = new Set(state.projects.filter(p=>{const c=catOf(p);return c&&(state.projCat==='all'||c===state.projCat);}).map(p=>methodOf(p).key));
-    const items = [...METHODS, {key:'모아',label:'모아타운·소규모',color:'#0e7490'}, {key:'지주택',label:'지역주택조합',color:'#ca8a04'}, {key:'리모델링',label:'리모델링',color:'#94a3b8'}, {key:'민간',label:'민간정비',color:'#64748b'}]
-      .filter(m=>shown.has(m.key));
-    el.innerHTML = `<span class="lt">추진방식</span>` + items.map(m=>`<span><i style="background:${m.color}"></i>${m.label}</span>`).join('');
+    const items = ALL_METHODS.filter(m=>shown.has(m.key));
+    el.innerHTML = `<span class="lt" data-reset="method">추진방식 ⟲</span>` +
+      items.map(m=>`<span class="lgi ${state.methodFilter && !state.methodFilter.has(m.key)?'off':''}" data-dim="method" data-key="${m.key}"><i style="background:${m.color}"></i>${m.label}</span>`).join('');
   } else {
-    el.innerHTML = `<span class="lt">진행단계</span>` + STAGE_BUCKETS.map(b=>`<span><i style="background:${b.color}"></i>${b.label}</span>`).join('') +
+    el.innerHTML = `<span class="lt" data-reset="stage">진행단계 ⟲</span>` +
+      STAGE_BUCKETS.map(b=>`<span class="lgi ${state.stageFilter && !state.stageFilter.has(b.key)?'off':''}" data-dim="stage" data-key="${b.key}"><i style="background:${b.color}"></i>${b.label}</span>`).join('') +
       `<span style="margin-top:2px"><i style="background:transparent;border:2px solid #0891b2"></i>🏘️ 모아타운</span>`;
   }
 }
@@ -815,6 +825,17 @@ function bindUI(){
     const b = e.target.closest('button'); if (!b) return;
     $('#colorBy').querySelectorAll('button').forEach(x=>x.classList.remove('active'));
     b.classList.add('active'); state.colorBy=b.dataset.cb; renderProjects();
+  });
+  // 범례 클릭 = 단계/방식 필터
+  $('#stageLegend').addEventListener('click', e => {
+    const reset = e.target.closest('[data-reset]');
+    if (reset){ if (reset.dataset.reset==='stage') state.stageFilter=new Set(STAGE_KEYS); else state.methodFilter=new Set(METHOD_KEYS); renderProjects(); return; }
+    const item = e.target.closest('.lgi'); if (!item) return;
+    const set = item.dataset.dim==='stage' ? state.stageFilter : state.methodFilter;
+    const k = item.dataset.key;
+    set.has(k) ? set.delete(k) : set.add(k);
+    if (set.size===0) (item.dataset.dim==='stage'?STAGE_KEYS:METHOD_KEYS).forEach(x=>set.add(x)); // 전부 끄면 전체 복원
+    renderProjects();
   });
   const closeSplash = () => $('#splash').classList.add('hide');
   $('#splashStart').addEventListener('click', closeSplash);

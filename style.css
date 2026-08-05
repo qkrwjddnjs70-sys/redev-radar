@@ -150,6 +150,11 @@ body{
   flex-direction:column; gap:4px; font-size:10.5px; color:var(--mut)}
 .stagelegend span{display:flex; align-items:center; gap:6px}
 .stagelegend i{width:9px; height:9px; border-radius:2px; display:inline-block}
+.stagelegend .lt{font-weight:700; margin-bottom:2px; cursor:pointer; color:var(--txt)}
+.stagelegend .lt:hover{color:var(--acc)}
+.stagelegend .lgi{cursor:pointer; user-select:none}
+.stagelegend .lgi:hover{color:var(--acc)}
+.stagelegend .lgi.off{opacity:.38; text-decoration:line-through}
 
 /* Project + grid markers */
 .proj-pin{border-radius:2px; border:1px solid rgba(0,0,0,.5)}
