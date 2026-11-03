@@ -208,6 +208,14 @@ function apply(){
     r = r.filter(d => norm(d.dong+d.gu).includes(q));
     if (q.length >= 2) state.projHits = state.projects.filter(p => isResi(p) && norm(p.name).includes(q)).slice(0, 8);
   }
+  // 검색엔 맞는데 필터에 가려진 동 — 이름이 맞는 동 + 찾은 구역이 속한 동
+  state.hiddenHits = [];
+  if (q){
+    const shown = new Set(r.map(key));
+    const want = new Set(state.all.filter(d => norm(d.dong+d.gu).includes(q)).map(key));
+    state.projHits.forEach(p => want.add(`${p.gu}|${p.dong}`));
+    state.hiddenHits = state.all.filter(d => want.has(key(d)) && !shown.has(key(d)));
+  }
   const af = activeFilters();
   $('#filterN').textContent = af.length ? af.length : '';
   $('#resetFilters').classList.toggle('hidden', !af.length);
@@ -246,6 +254,14 @@ function renderList(){
         <span class="meta">${p.gu} ${p.dong||''} · ${p.stage||'-'}</span>${steps5(p)}</span>
     </button></li>`;
   }).join('') + (state.filtered.length ? `<li class="lsec">동 ${state.filtered.length}곳</li>` : '') : '';
+  const hid = state.hiddenHits || [];
+  const hidHtml = hid.length ? `<li class="lsec">필터에 가려진 동 ${hid.length}곳 · 눌러서 보기</li>` + hid.map(d =>
+    `<li><button class="item dim" data-k="${key(d)}">
+      <span class="gbadge ${d.grade}">${d.grade}</span>
+      <span class="iname"><b>${d.dong}</b><span class="meta">${d.gu} · 노후 ${fmt(d.nohu)}%</span>
+        <span class="vtag vhid">${whyHidden(d)}</span></span>
+      <span class="iscore"><b>${Math.round(d.score)}</b>점</span>
+    </button></li>`).join('') : '';
   const html = state.filtered.slice(0,400).map(d => {
     const k = key(d);
     const walk = d.walk_min!=null ? ` · 역 ${d.walk_min}분` : '';
@@ -259,12 +275,23 @@ function renderList(){
   }).join('');
   const ul = $('#list');
   const af = activeFilters();
-  ul.innerHTML = (projHtml + html) || `<li class="empty"><b>조건에 맞는 동이 없습니다</b>
+  ul.innerHTML = (projHtml + hidHtml + html) || `<li class="empty"><b>조건에 맞는 동이 없습니다</b>
     <p>${af.length ? `적용 중: ${af.join(' · ')}` : '검색어나 필터를 바꿔 보세요'}</p>
     ${af.length ? `<button data-reset-filters>${ico('reset')}필터 초기화</button>` : ''}</li>`;
   ul.querySelectorAll('.item[data-k]').forEach(b => b.addEventListener('click', () => select(b.dataset.k, true)));
   ul.querySelectorAll('.item[data-p]').forEach(b => b.addEventListener('click', () => focusProject(hits[+b.dataset.p])));
   const rb = ul.querySelector('[data-reset-filters]'); rb && rb.addEventListener('click', () => resetFilters());
+}
+// 동이 어떤 필터에 걸려 빠졌는지 (첫 번째 이유)
+function whyHidden(d){
+  if (state.verdict!=='all' && d.verdict!==state.verdict) return `정비상태 ${d.verdict}`;
+  if (state.gu!=='all' && d.gu!==state.gu) return `다른 구`;
+  if (!state.grades.has(d.grade)) return `${d.grade}등급`;
+  if ((d.nohu||0) < state.nohu) return `노후도 ${fmt(d.nohu)}% < ${state.nohu}%`;
+  if (state.walk<30 && !(d.walk_min!=null && d.walk_min<=state.walk)) return `역 도보 ${d.walk_min??'—'}분`;
+  if (state.far<800 && d.est_far!=null && d.est_far>state.far) return `용적률 ${fmt(d.est_far)}% > ${state.far}%`;
+  if (state.resiOnly && d.subtype==='도심상업') return '도심상업지';
+  return '필터';
 }
 // 조합 명칭 꼬리 정리 — '양평제13구역 도시환경정비사업조합' → '양평제13구역 도시환경정비'
 const shortName = n => (n || '(이름없음)').replace(/\s*(사업)?\s*(조합설립추진위원회|추진위원회|조합)$/, '').replace(/사업$/, '');
@@ -479,11 +506,13 @@ function showZoneDetail(p){
         <div class="metric"><div class="mk">사업 유형</div><div class="mv" style="font-size:14px">${p.type||'-'}</div></div>
         <div class="metric"><div class="mk">위치</div><div class="mv" style="font-size:14px">${p.gu} ${p.dong||''}</div></div>
       </div>
+      ${state.all.some(d => d.gu===p.gu && d.dong===p.dong) ? `<button class="dbtn" id="toDong">${ico('pin')}${p.dong} 노후도·점수 보기</button>` : ''}
       ${naverSearchBtn(p.name || `${p.gu} ${p.dong}`)}
       ${naverBtn(p.lat, p.lng)}
       <div class="disclaimer">공식 명칭 · ${p.name||'-'}<br>세대수·용적률·시공사는 사업시행인가 이후 확정되며 일괄 데이터가 없어 검색으로 연결합니다. 진행단계는 서울 정비사업 정보몽땅 기준이며 최신 세부는 조합·자치구 고시를 확인하세요.</div>
     </div>`;
   openDetail();
+  const td = $('#toDong'); td && td.addEventListener('click', () => select(`${p.gu}|${p.dong}`, false));
 }
 
 function openDetail(){
