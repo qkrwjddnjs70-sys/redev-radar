@@ -11,7 +11,7 @@ const STAGE_BUCKETS = [
     match:['사업시행','사업계획승인','지구단위'] },
   { key:'mgmt',  label:'관리처분인가',        color:'#f97316',
     match:['관리처분'] },
-  { key:'build', label:'착공·이주·준공',      color:'#22c55e',
+  { key:'build', label:'착공·이주·분양',      color:'#22c55e',
     match:['착공','철거','이주','분양','준공'] },
 ];
 function stageBucket(stage){
@@ -125,7 +125,9 @@ Promise.all([
   state.deals = deals;
   state.stageFilter = new Set(STAGE_KEYS); state.methodFilter = new Set(METHOD_KEYS);
   state.all = j.dongs.filter(d => d.lat && d.lng);
-  state.projects = (proj || []).filter(p => p.lat && p.lng);
+  // 준공인가 = 이미 완공된 단지(예: 양평12구역→영등포자이디그니티) — '진행중 정비사업'에서 제외
+  const isDone = p => /준공/.test(p.stage || '');
+  state.projects = (proj || []).filter(p => p.lat && p.lng && !isDone(p));
   state.subway = sub;
   state.moaZones = zones || [];
   // 개발 프로젝트가 있는 (구|동) 집합 — 노후도 高·미개발 동에 별표 표시용
