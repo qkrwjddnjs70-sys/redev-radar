@@ -335,3 +335,6 @@ body{
   #sidebar #mapControls{position:static; max-width:none; margin:0 18px 12px; box-shadow:none;
     backdrop-filter:none; background:var(--panel2)}
 }
+
+/* 베이스 지도(OSM)를 차분하게 — 데이터 레이어가 돋보이도록 */
+.base-tiles{filter:grayscale(.75) brightness(1.04) contrast(.92)}

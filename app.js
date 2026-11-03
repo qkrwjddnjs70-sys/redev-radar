@@ -71,8 +71,9 @@ const STAGE_KEYS = ['plan','union','impl','mgmt','build'];
 const METHOD_KEYS = ['신통','공공재개발','공공재건축','도심공공','역세권','촉진','모아','지주택','리모델링','민간'];
 
 const map = L.map('map', { zoomControl:true, attributionControl:false }).setView([37.5512, 126.9882], 11);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom:19 }).addTo(map);
-L.control.attribution({ prefix:false }).addAttribution('© CARTO · 건축물대장·정비사업').addTo(map);
+// CARTO 무료 타일이 'API KEY REQUIRED' 워터마크로 바뀌어 키 불필요한 OSM으로 교체(한글 지명)
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, className:'base-tiles' }).addTo(map);
+L.control.attribution({ prefix:false }).addAttribution('© OpenStreetMap contributors · 건축물대장·정비사업').addTo(map);
 
 // 지하철 노선은 동 마커 위에 보이도록 전용 pane(오버레이 400 위, 마커 600 아래)
 map.createPane('subwayPane').style.zIndex = 450;
