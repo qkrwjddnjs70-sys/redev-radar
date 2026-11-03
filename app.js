@@ -64,7 +64,7 @@ const state = {
   all: [], projects: [], subway: null, moaZones: [],
   verdict: 'all', gu: 'all', grades: new Set(['S','A','B','C','D']),
   nohu: 70, walk: 30, far: 200, q: '', sort: 'score', sel: null,
-  resiOnly: true,   // 도심상업지(명동·을지로 등) 제외 — 주거 재개발 탐색이 기본
+  resiOnly: true,   // 주거사업 없는 도심상업지(명동·을지로 등) 제외 — 주거 재개발 탐색이 기본
   showProjects: false, projCat: 'all', moaZone: false, showSubway: true,
   mode: 'dong',   // 'dong' | 'moa'
   compare: [],    // 비교 담은 동 key 목록 (최대 4)
@@ -196,7 +196,8 @@ function apply(){
     (d.nohu||0) >= state.nohu &&
     (state.walk>=30 || (d.walk_min!=null && d.walk_min<=state.walk)) &&
     (state.far>=800 || d.est_far==null || d.est_far<=state.far) &&
-    (!state.resiOnly || d.subtype !== '도심상업')
+    // 도심상업이라도 아파트 정비사업이 있는 동(문래·영등포·신설동 등 준공업·역세권)은 유지 — 명동·을지로 같은 업무지구만 제외
+    (!state.resiOnly || d.subtype !== '도심상업' || state.projectDongs.has(key(d)))
   );
   // 검색: 동·구 + 정비사업 구역명(양평13 → 양평제13구역)
   state.projHits = [];
