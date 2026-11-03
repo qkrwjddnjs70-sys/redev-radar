@@ -61,6 +61,7 @@ const state = {
   all: [], projects: [], subway: null, moaZones: [],
   verdict: 'all', gu: 'all', grades: new Set(['S','A','B','C','D']),
   nohu: 70, walk: 30, far: 200, q: '', sort: 'score', sel: null,
+  resiOnly: true,   // 도심상업지(명동·을지로 등) 제외 — 주거 재개발 탐색이 기본
   showProjects: false, projCat: 'all', moaZone: false, showSubway: true,
   mode: 'dong',   // 'dong' | 'moa'
   compare: [],    // 비교 담은 동 key 목록 (최대 4)
@@ -86,17 +87,26 @@ const layer = L.layerGroup().addTo(map);      // 동 마커
 const zoneLayer = L.layerGroup().addTo(map);  // 모아타운 구역
 const projLayer = L.layerGroup().addTo(map);  // 실제 정비사업
 const gridLayer = L.layerGroup().addTo(map);  // 블록정밀 격자
+
+const hiLayer = L.layerGroup().addTo(map);    // 검색으로 찾은 구역 강조 링
 const markers = new Map();
 
 const key = d => `${d.gu}|${d.dong}`;
 const $ = s => document.querySelector(s);
+const ico = n => `<svg class="ico" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+const isMobile = () => window.matchMedia('(max-width:760px)').matches;
 // 네이버 부동산 지도(좌표) 링크 — 해당 위치 매물 보기
 const naverLink = (lat, lng) => `https://new.land.naver.com/houses?ms=${lat},${lng},16`;
 const naverBtn = (lat, lng) =>
-  `<a class="dbtn naver" href="${naverLink(lat, lng)}" target="_blank" rel="noopener">🔗 네이버 부동산 · 이 지역 매물 보기</a>`;
+  `<a class="dbtn naver" href="${naverLink(lat, lng)}" target="_blank" rel="noopener">네이버 부동산 · 이 지역 매물 ${ico('external')}</a>`;
 // 사업 상세(세대수·시공사·용적률) 네이버 검색 — 대량수집 불가 데이터라 검색으로 연결
 const naverSearchBtn = (q) =>
-  `<a class="dbtn search" href="https://search.naver.com/search.naver?query=${encodeURIComponent(q + ' 재개발 세대수 시공사')}" target="_blank" rel="noopener">🔎 세대수·용적률·시공사 검색</a>`;
+  `<a class="dbtn" href="https://search.naver.com/search.naver?query=${encodeURIComponent(q + ' 재개발 세대수 시공사')}" target="_blank" rel="noopener">${ico('search')}세대수·용적률·시공사 검색</a>`;
+// 구역명 검색 정규화 — '양평13' ↔ '양평제13구역'
+const norm = s => (s || '').toLowerCase().replace(/\s+/g, '').replace(/제(?=\d)/g, '');
+const stageIdx = p => STAGE_BUCKETS.findIndex(x => x.key === stageBucket(p.stage).key);
+const steps5 = p => { const i = stageIdx(p);
+  return `<span class="steps5" aria-label="5단계 중 ${i+1}단계">${STAGE_BUCKETS.map((b,j)=>`<i class="${j<=i?'on':''}" style="--c:${stageBucket(p.stage).color}"></i>`).join('')}</span>`; };
 
 // ---------- load ----------
 const noCache = { cache: 'no-store' };   // 데이터 갱신이 즉시 반영되도록 캐시 우회
@@ -118,13 +128,18 @@ Promise.all([
   // 개발 프로젝트가 있는 (구|동) 집합 — 노후도 高·미개발 동에 별표 표시용
   state.projectDongs = new Set(state.projects.filter(isResi).map(p => `${p.gu}|${p.dong}`));
   $('#dataYear').textContent = j.year;
-  $('#projCount').textContent = state.projects.length;
+  $('#dongTotal').textContent = state.all.length;
+  $('#projCount').textContent = state.projects.filter(isResi).length;
   $('#moaZoneN').textContent = state.moaZones.filter(z => z.n >= 2).length;
   $('#moaModeN').textContent = state.moaZones.length;
+  // 데이터에 없는 정비상태(예: 경계 0건)는 버튼 숨김
+  $('#verdictSeg').querySelectorAll('button[data-v]').forEach(b => {
+    if (b.dataset.v !== 'all' && !state.all.some(d => d.verdict === b.dataset.v)) b.classList.add('hidden');
+  });
   resetControls();
   initGuOptions(); renderLegend(); bindUI(); apply();
   renderSubway();   // 지하철 노선도 기본 표시
-}).catch(e => { $('#list').innerHTML = `<li style="padding:20px;color:#f87171">데이터 로드 실패: ${e}</li>`; });
+}).catch(e => { $('#list').innerHTML = `<li class="empty"><b>데이터를 불러오지 못했습니다</b><p>${e}</p><button onclick="location.reload()">${ico('reset')}새로고침</button></li>`; });
 
 // 브라우저 폼 복원으로 인한 슬라이더/입력 잔존값 방지 — DOM을 기본값으로 강제
 function resetControls(){
@@ -134,10 +149,33 @@ function resetControls(){
   $('#search').value = ''; $('#sortSel').value = 'score';
   $('#guSel').value = 'all'; $('#projToggle').checked = false;
   $('#moaZone').checked = false; $('#subwayToggle').checked = true;
-  document.querySelectorAll('#gradeFilter input').forEach(i => i.checked = true);
   $('#moaModeBtn').classList.remove('active');
-  Object.assign(state, { verdict:'all', gu:'all', grades:new Set(['S','A','B','C','D']),
-    nohu:70, walk:30, far:200, q:'', sort:'score', showProjects:false, projCat:'all', moaZone:false, showSubway:true, mode:'dong' });
+  Object.assign(state, { sort:'score', showProjects:false, projCat:'all', moaZone:false, showSubway:true, mode:'dong' });
+  resetFilters(false);
+}
+// 탐색 필터만 기본값으로 (지도 레이어 설정은 유지)
+function resetFilters(run = true){
+  $('#nohuRange').value = 70; $('#nohuVal').textContent = '70';
+  $('#walkRange').value = 30; $('#walkVal').textContent = '전체';
+  $('#farRange').value = 200; $('#farVal').textContent = '200%';
+  $('#search').value = ''; $('#guSel').value = 'all'; $('#resiOnly').checked = true;
+  document.querySelectorAll('#gradeFilter input').forEach(i => i.checked = true);
+  $('#verdictSeg').querySelectorAll('button').forEach(x => x.classList.toggle('active', x.dataset.v === 'all'));
+  Object.assign(state, { verdict:'all', gu:'all', grades:new Set(['S','A','B','C','D']), nohu:70, walk:30, far:200, q:'', resiOnly:true });
+  if (run) apply();
+}
+// 기본값과 다른 필터 목록 (빈 결과 원인 안내·필터 배지용)
+function activeFilters(){
+  const f = [];
+  if (state.q) f.push(`검색 '${state.q}'`);
+  if (state.verdict !== 'all') f.push(state.verdict);
+  if (state.gu !== 'all') f.push(state.gu);
+  if (state.grades.size < 5) f.push(`등급 ${[...state.grades].join('')}`);
+  if (state.nohu !== 70) f.push(`노후도 ${state.nohu}%+`);
+  if (state.walk < 30) f.push(`도보 ${state.walk}분 이내`);
+  if (state.far !== 200) f.push(state.far >= 800 ? '용적률 전체' : `용적률 ${state.far}% 이하`);
+  if (!state.resiOnly) f.push('도심상업 포함');
+  return f;
 }
 
 function initGuOptions(){
@@ -154,12 +192,19 @@ function apply(){
     state.grades.has(d.grade) &&
     (d.nohu||0) >= state.nohu &&
     (state.walk>=30 || (d.walk_min!=null && d.walk_min<=state.walk)) &&
-    (state.far>=800 || d.est_far==null || d.est_far<=state.far)
+    (state.far>=800 || d.est_far==null || d.est_far<=state.far) &&
+    (!state.resiOnly || d.subtype !== '도심상업')
   );
-  if (state.q){
-    const q = state.q.trim().toLowerCase();
-    r = r.filter(d => (d.dong+d.gu).toLowerCase().includes(q));
+  // 검색: 동·구 + 정비사업 구역명(양평13 → 양평제13구역)
+  state.projHits = [];
+  const q = norm(state.q.trim());
+  if (q){
+    r = r.filter(d => norm(d.dong+d.gu).includes(q));
+    if (q.length >= 2) state.projHits = state.projects.filter(p => isResi(p) && norm(p.name).includes(q)).slice(0, 8);
   }
+  const af = activeFilters();
+  $('#filterN').textContent = af.length ? af.length : '';
+  $('#resetFilters').classList.toggle('hidden', !af.length);
   const cmp = {
     score: (a,b)=>(b.score||0)-(a.score||0),
     nohu:  (a,b)=>(b.nohu||0)-(a.nohu||0),
@@ -176,28 +221,69 @@ function renderSummary(){
   const counts = { S:0,A:0,B:0,C:0,D:0 };
   state.filtered.forEach(d => counts[d.grade]!=null && counts[d.grade]++);
   const cand = state.filtered.filter(d=>d.verdict==='후보').length;
+  const g1 = state.grades.size===1 ? [...state.grades][0] : null;
+  // 칩 = 바로가기 필터 (후보만 / 해당 등급만, 다시 누르면 해제)
   $('#summary').innerHTML =
-    `<div class="chip" title="현재 필터의 미지정 후보"><b style="color:#0891b2">${cand}</b><span>🎯 후보</span></div>` +
+    `<button class="chip ${state.verdict==='후보'?'on':''}" data-chip="cand" title="미지정 후보만 보기"><b style="color:var(--cand)">${cand}</b><span>미지정 후보</span></button>` +
     ['S','A','B','C'].map(g =>
-      `<div class="chip"><b class="g-${g}">${counts[g]}</b><span>${g}등급</span></div>`).join('');
+      `<button class="chip ${g1===g?'on':''}" data-chip="${g}" title="${g}등급만 보기"><b class="g-${g}">${counts[g]}</b><span>${g}등급</span></button>`).join('');
 }
 
 function renderList(){
   $('#resultCount').textContent = `${state.filtered.length}개 동`;
+  const hits = state.projHits || [];
+  const projHtml = hits.length ? `<li class="lsec">정비사업 구역 ${hits.length}건</li>` + hits.map((p,i) => {
+    const b = stageBucket(p.stage);
+    return `<li><button class="item" data-p="${i}">
+      <span class="ptag" style="background:${b.color}">${stageIdx(p)+1}/5</span>
+      <span class="iname"><b>${shortName(p.name)}</b>
+        <span class="meta">${p.gu} ${p.dong||''} · ${p.stage||'-'}</span>${steps5(p)}</span>
+    </button></li>`;
+  }).join('') + (state.filtered.length ? `<li class="lsec">동 ${state.filtered.length}곳</li>` : '') : '';
   const html = state.filtered.slice(0,400).map(d => {
     const k = key(d);
-    const walk = d.walk_min!=null ? `🚇 ${d.walk_min}분` : '';
-    return `<li class="item ${state.sel===k?'sel':''}" data-k="${k}">
-      <div class="gbadge ${d.grade}">${d.grade}</div>
-      <div class="iname"><b>${d.dong}</b>
-        <span>${d.gu} · 노후 ${fmt(d.nohu)}% ${walk}</span>
-        <div><span class="vtag v${d.verdict}">${d.verdict}</span></div></div>
-      <div class="iscore"><b>${Math.round(d.score)}</b>점</div>
-    </li>`;
+    const walk = d.walk_min!=null ? ` · 역 ${d.walk_min}분` : '';
+    return `<li><button class="item ${state.sel===k?'sel':''}" data-k="${k}">
+      <span class="gbadge ${d.grade}" aria-label="${d.grade}등급">${d.grade}</span>
+      <span class="iname"><b>${d.dong}</b>
+        <span class="meta">${d.gu} · 노후 ${fmt(d.nohu)}%${walk}</span>
+        <span class="vtag v${d.verdict}">${d.verdict}</span></span>
+      <span class="iscore"><b>${Math.round(d.score)}</b>점</span>
+    </button></li>`;
   }).join('');
   const ul = $('#list');
-  ul.innerHTML = html || '<li style="padding:24px;text-align:center;color:#8b97a6">조건에 맞는 동이 없습니다</li>';
-  ul.querySelectorAll('.item').forEach(li => li.addEventListener('click', () => select(li.dataset.k, true)));
+  const af = activeFilters();
+  ul.innerHTML = (projHtml + html) || `<li class="empty"><b>조건에 맞는 동이 없습니다</b>
+    <p>${af.length ? `적용 중: ${af.join(' · ')}` : '검색어나 필터를 바꿔 보세요'}</p>
+    ${af.length ? `<button data-reset-filters>${ico('reset')}필터 초기화</button>` : ''}</li>`;
+  ul.querySelectorAll('.item[data-k]').forEach(b => b.addEventListener('click', () => select(b.dataset.k, true)));
+  ul.querySelectorAll('.item[data-p]').forEach(b => b.addEventListener('click', () => focusProject(hits[+b.dataset.p])));
+  const rb = ul.querySelector('[data-reset-filters]'); rb && rb.addEventListener('click', () => resetFilters());
+}
+// 조합 명칭 꼬리 정리 — '양평제13구역 도시환경정비사업조합' → '양평제13구역 도시환경정비'
+const shortName = n => (n || '(이름없음)').replace(/\s*(사업)?\s*(조합설립추진위원회|추진위원회|조합)$/, '').replace(/사업$/, '');
+// 검색 결과 구역으로 이동: 정비사업 레이어 켜고, 강조 링 + 상세
+function focusProject(p){
+  if (!p) return;
+  if (!state.showProjects){ state.showProjects = true; $('#projToggle').checked = true; }
+  if (state.colorBy==='stage') state.stageFilter = new Set(STAGE_KEYS); else state.methodFilter = new Set(METHOD_KEYS);
+  if (state.projCat !== 'all' && catOf(p) !== state.projCat){
+    state.projCat = 'all';
+    $('#projCat').querySelectorAll('button').forEach(x=>x.classList.toggle('active', x.dataset.c==='all'));
+  }
+  renderProjects();
+  hiLayer.clearLayers();
+  L.circleMarker([p.lat, p.lng], { radius:15, color:'#17202d', weight:2, fill:false, dashArray:'3 3', interactive:false }).addTo(hiLayer);
+  showZoneDetail(p);
+  flyTo(p.lat, p.lng, 16);
+}
+// 상세 패널이 가리는 만큼 비켜서 중심 맞추기 (데스크톱: 왼쪽으로 패널 절반, 모바일: 지도 영역 그대로)
+function flyTo(lat, lng, minZoom){
+  const z = Math.max(map.getZoom(), minZoom);
+  const detailOpen = !$('#detail').classList.contains('hidden');
+  const dx = detailOpen && !isMobile() ? $('#detail').offsetWidth / 2 : 0;
+  const c = map.unproject(map.project([lat, lng], z).add([dx, 0]), z);
+  try { map.setView(c, z, { animate:true }); } catch(_){}
 }
 
 function renderMarkers(){
@@ -249,13 +335,15 @@ function renderProjects(){
   if (zoneable && state.moaZone) renderMoaZones();
 
   const byMethod = state.colorBy === 'method';
+  // 줌아웃 시 점을 작게 — 서울 전역 800여 점 겹침 완화
+  const z = map.getZoom(), sc = z <= 11 ? .5 : z === 12 ? .7 : z === 13 ? .85 : 1;
   list.forEach(p => {
     const b = stageBucket(p.stage), moa = isMoa(p), m = methodOf(p);
     const fill = byMethod ? m.color : b.color;
     L.circleMarker([p.lat, p.lng], {
-      radius: moa?9:8, color: moa?'#0891b2':'#0b0f14', weight: moa?2.5:1.5,
+      radius: Math.max(3.5, (moa?9:8)*sc), color: moa?'#0e7490':'#fff', weight: moa?2:(sc<1?1:1.5),
       fillColor:fill, fillOpacity:.95,
-    }).bindTooltip(`${p.name||'(이름없음)'}<br>${moa?'🏘️ ':''}${m.label} · ${p.stage||'-'}`, {direction:'top'})
+    }).bindTooltip(`${shortName(p.name)}<br>${m.label} · ${p.stage||'-'}`, {direction:'top'})
       .on('click', () => showZoneDetail(p))
       .addTo(projLayer);
   });
@@ -265,15 +353,19 @@ function renderProjects(){
 const ALL_METHODS = [...METHODS, {key:'모아',label:'모아타운·소규모',color:'#0e7490'}, {key:'지주택',label:'지역주택조합',color:'#ca8a04'}, {key:'리모델링',label:'리모델링',color:'#94a3b8'}, {key:'민간',label:'민간정비',color:'#64748b'}];
 function renderLegend(){
   const el = $('#stageLegend');
+  const pool = state.projects.filter(p=>{const c=catOf(p);return c&&(state.projCat==='all'||c===state.projCat);});
+  const cnt = {}; const kf = state.colorBy==='method' ? p=>methodOf(p).key : p=>stageBucket(p.stage).key;
+  pool.forEach(p => { const k = kf(p); cnt[k] = (cnt[k]||0)+1; });
+  const item = (dim, set, k, color, label) => { const on = !set || set.has(k);
+    return `<button class="lgi ${on?'':'off'}" data-dim="${dim}" data-key="${k}" aria-pressed="${on}"><i style="background:${color}"></i>${label}<span class="n">${cnt[k]||0}</span></button>`; };
+  const head = (dim, title) => `<div class="lthead"><span>${title} · 눌러서 골라보기</span><button class="lt" data-reset="${dim}">${ico('reset')}전체</button></div>`;
   if (state.colorBy === 'method'){
-    const shown = new Set(state.projects.filter(p=>{const c=catOf(p);return c&&(state.projCat==='all'||c===state.projCat);}).map(p=>methodOf(p).key));
-    const items = ALL_METHODS.filter(m=>shown.has(m.key));
-    el.innerHTML = `<span class="lt" data-reset="method">추진방식 ⟲</span>` +
-      items.map(m=>`<span class="lgi ${state.methodFilter && !state.methodFilter.has(m.key)?'off':''}" data-dim="method" data-key="${m.key}"><i style="background:${m.color}"></i>${m.label}</span>`).join('');
+    el.innerHTML = head('method','추진방식') +
+      ALL_METHODS.filter(m=>cnt[m.key]).map(m=>item('method', state.methodFilter, m.key, m.color, m.label)).join('');
   } else {
-    el.innerHTML = `<span class="lt" data-reset="stage">진행단계 ⟲</span>` +
-      STAGE_BUCKETS.map(b=>`<span class="lgi ${state.stageFilter && !state.stageFilter.has(b.key)?'off':''}" data-dim="stage" data-key="${b.key}"><i style="background:${b.color}"></i>${b.label}</span>`).join('') +
-      `<span style="margin-top:2px"><i style="background:transparent;border:2px solid #0891b2"></i>🏘️ 모아타운</span>`;
+    el.innerHTML = head('stage','진행단계') +
+      STAGE_BUCKETS.map((b,i)=>item('stage', state.stageFilter, b.key, b.color, `${i+1}. ${b.label}`)).join('') +
+      `<span class="moa-key"><i></i>모아타운·소규모 (청록 테두리)</span>`;
   }
 }
 
@@ -281,12 +373,12 @@ function renderLegend(){
 function renderMoaZones(){
   zoneLayer.clearLayers();
   state.moaZones.filter(z => z.n >= 2).forEach(z => {
-    L.circle([z.lat, z.lng], { radius:z.r, color:'#0891b2', weight:1.5, dashArray:'5 4',
-      fillColor:'#0891b2', fillOpacity:.1 })
+    L.circle([z.lat, z.lng], { radius:z.r, color:'#0e7490', weight:1.5, dashArray:'5 4',
+      fillColor:'#0e7490', fillOpacity:.08 })
       .on('click', () => showMoaZoneDetail(z))
       .addTo(zoneLayer);
     L.marker([z.lat, z.lng], { interactive:false, keyboard:false, icon: L.divIcon({ className:'',
-      html:`<div class="moa-label">🏘️ ${z.dong} <b>${z.n}구역</b></div>`, iconSize:[0,0], iconAnchor:[0,0] })
+      html:`<div class="moa-label">${z.dong} <b>${z.n}구역</b></div>`, iconSize:[0,0], iconAnchor:[0,0] })
     }).addTo(zoneLayer);
   });
 }
@@ -295,19 +387,19 @@ function showMoaZoneDetail(z){
   $('#detailBody').innerHTML = `
     <div class="dbody">
       <div class="dhead">
-        <div class="gbadge" style="background:var(--moa);color:#fff">🏘️</div>
-        <div><h2 style="font-size:20px">${z.dong} 모아타운</h2>
+        <div class="zbadge" style="width:44px;height:44px;font-size:18px;border-radius:10px">${z.n}</div>
+        <div><h2>${z.dong} 모아타운</h2>
           <div class="dgu">${z.gu} · 소규모정비 <b style="color:var(--moa)">${z.n}구역</b> 묶음</div></div>
       </div>
       <div class="dproj">
         <div class="dproj-h">묶인 가로주택·소규모정비 구역</div>
-        ${z.names.map(n=>`<div class="dproj-row"><span class="dproj-name" style="color:var(--txt)">• ${n}</span></div>`).join('')}
-        ${z.n>z.names.length?`<div class="dproj-more">…외 ${z.n-z.names.length}구역</div>`:''}
+        ${z.names.map(n=>`<div class="dproj-row"><span class="dproj-name">${shortName(n)}</span></div>`).join('')}
+        ${z.n>z.names.length?`<div class="dproj-more">외 ${z.n-z.names.length}구역</div>`:''}
       </div>
       ${naverBtn(z.lat, z.lng)}
-      <div class="disclaimer">모아타운(소규모주택정비 관리지역)은 인접한 <b>가로주택정비·소규모재건축 구역을 묶어</b> 함께 정비하는 단위입니다. 본 영역은 인접 사업 근접 클러스터링 추정치로, 서울시 공식 관리지역 경계와는 다를 수 있습니다.</div>
+      <div class="disclaimer">모아타운(소규모주택정비 관리지역)은 인접한 가로주택정비·소규모재건축 구역을 묶어 함께 정비하는 단위입니다. 본 영역은 인접 사업 근접 클러스터링 추정치로, 서울시 공식 관리지역 경계와는 다를 수 있습니다.</div>
     </div>`;
-  $('#detail').classList.remove('hidden');
+  openDetail();
 }
 
 // ---------- 지하철 노선도 ----------
@@ -341,7 +433,7 @@ function renderSubway(){
 map.on('zoomend', () => { if (state.showSubway) renderSubway(); });
 
 // ---------- 정비사업 구역 상세 (점 클릭) ----------
-const CAT_LABEL = { recon:'🏢 재건축', redev:'🏠 재개발', moa:'🏘️ 모아타운' };
+const CAT_LABEL = { recon:'재건축', redev:'재개발', moa:'모아타운·소규모' };
 // 뉴스로 확정된 주요 구역의 재개발 '계획' (data/curated_plans.json, 이름 부분일치)
 let CURATED_PLANS = [];
 const curatedPlan = p => CURATED_PLANS.find(c => (p.name||'').includes(c.match));
@@ -349,30 +441,30 @@ function showZoneDetail(p){
   const b = stageBucket(p.stage), cat = catOf(p);
   const curIdx = STAGE_BUCKETS.findIndex(x => x.key === b.key);
   const steps = STAGE_BUCKETS.map((s,i) =>
-    `<div class="zstep ${i<=curIdx?'done':''}" style="--c:${s.color}"><i></i><span>${s.label.split('(')[0]}</span></div>`).join('');
-  // 현재(재건축 前) 단지 정보 — 기존 아파트 DB 매칭분에만, 경고 함께
+    `<div class="zstep ${i<=curIdx?'done':''} ${i===curIdx?'cur':''}" style="--c:${b.color}"><i></i><span>${s.label.split('(')[0]}</span></div>`).join('');
+  const m = methodOf(p);
   const plan = curatedPlan(p);
   const planHtml = plan ? `
     <div class="plan-spec">
-      <div class="plan-h">🏗️ 재개발 계획${plan.brand?` · ${plan.brand}`:''} <span>뉴스 기준</span></div>
+      <div class="plan-h">재개발 계획${plan.brand?` · ${plan.brand}`:''} <span>뉴스 기준</span></div>
       <div class="cur-grid">
         ${plan.units?`<div><span>계획 세대수</span><b>${plan.units.toLocaleString()}세대</b></div>`:''}
         ${plan.floors?`<div><span>최고 층수</span><b>${plan.floors}층</b></div>`:''}
-        ${plan.builder?`<div><span>시공사</span><b style="font-size:12.5px">${plan.builder}</b></div>`:''}
+        ${plan.builder?`<div><span>시공사</span><b style="font-size:13px">${plan.builder}</b></div>`:''}
       </div>
-      <div class="plan-note">📰 ${plan.src} · 조합·언론 발표 기준. 인허가 과정에서 변경될 수 있습니다.</div>
+      <div class="plan-note">${plan.src} · 조합·언론 발표 기준. 인허가 과정에서 변경될 수 있습니다.</div>
     </div>` : '';
   $('#detailBody').innerHTML = `
     <div class="dbody">
       <div class="dhead">
-        <div class="gbadge" style="background:${b.color};color:#fff">${(CAT_LABEL[cat]||'🏗️').slice(0,2)}</div>
-        <div><h2 style="font-size:18px;line-height:1.25">${p.name||'(이름없음)'}</h2>
+        <div class="ptag" style="background:${b.color}">${curIdx+1}/5</div>
+        <div><h2 style="font-size:18px">${shortName(p.name)}</h2>
           <div class="dgu">${p.gu} ${p.dong||''} · ${CAT_LABEL[cat]||p.type}
-            <span class="mtag" style="background:${methodOf(p).color}">${methodOf(p).label}</span></div></div>
+            <span class="mtag"><i style="background:${m.color}"></i>${m.label}</span></div></div>
       </div>
-      <div class="zstage" style="border-color:${b.color}">
-        <span class="zstage-lbl">현재 진행 단계</span>
-        <span class="zstage-v" style="color:${b.color}">${p.stage||'-'}</span>
+      <div class="zstage">
+        <span class="zstage-lbl">현재 진행 단계 · ${curIdx+1}/5</span>
+        <span class="zstage-v">${p.stage||'-'}</span>
       </div>
       <div class="zsteps">${steps}</div>
       ${planHtml}
@@ -383,15 +475,21 @@ function showZoneDetail(p){
       </div>
       ${naverSearchBtn(p.name || `${p.gu} ${p.dong}`)}
       ${naverBtn(p.lat, p.lng)}
-      <div class="disclaimer">세대수·용적률·시공사는 사업시행인가 이후 확정되며 일괄 데이터가 없어 검색으로 연결합니다. 진행단계는 서울 정비사업 정보몽땅 기준이며 최신 세부는 조합·자치구 고시를 확인하세요.</div>
+      <div class="disclaimer">공식 명칭 · ${p.name||'-'}<br>세대수·용적률·시공사는 사업시행인가 이후 확정되며 일괄 데이터가 없어 검색으로 연결합니다. 진행단계는 서울 정비사업 정보몽땅 기준이며 최신 세부는 조합·자치구 고시를 확인하세요.</div>
     </div>`;
-  $('#detail').classList.remove('hidden');
+  openDetail();
 }
 
-function buildStageLegend(){
-  $('#stageLegend').innerHTML = STAGE_BUCKETS.map(b =>
-    `<span><i style="background:${b.color}"></i>${b.label}</span>`).join('') +
-    `<span style="margin-top:2px"><i style="background:transparent;border:2px solid #0891b2"></i>🏘️ 모아타운(청록 테두리)</span>`;
+function openDetail(){
+  $('#detail').classList.remove('hidden');
+  document.body.classList.add('detail-open');
+  $('#detail').scrollTop = 0;
+}
+function closeDetail(){
+  $('#detail').classList.add('hidden');
+  document.body.classList.remove('detail-open');
+  gridLayer.clearLayers(); hiLayer.clearLayers();
+  state.sel = null; renderList(); renderMarkers();
 }
 
 // ---------- selection / detail ----------
@@ -399,16 +497,14 @@ function select(k, fromList){
   state.sel = k;
   const d = state.all.find(x => key(x)===k);
   if (!d) return;
-  gridLayer.clearLayers();
+  gridLayer.clearLayers(); hiLayer.clearLayers();
   showDetail(d);
   renderList(); renderMarkers();
   if (fromList){
     const li = document.querySelector(`.item[data-k="${CSS.escape(k)}"]`);
     li && li.scrollIntoView({block:'nearest'});
   }
-  if (fromList && Number.isFinite(d.lat) && Number.isFinite(d.lng)){
-    try { map.setView([d.lat, d.lng], Math.max(map.getZoom(), 15), { animate:true }); } catch(_){}
-  }
+  if (fromList && Number.isFinite(d.lat) && Number.isFinite(d.lng)) flyTo(d.lat, d.lng, 15);
 }
 
 function bar(label, val, max, color){
@@ -419,7 +515,8 @@ function bar(label, val, max, color){
 
 // ---------- 딥분석 (순위·백분위·강약점) ----------
 function pctile(v, arr){ if (v==null) return null; let c=0; for (const x of arr) if (x<v) c++; return Math.round(c/arr.length*100); }
-function pctTag(pct){ return pct>=75 ? ['우수','#16a34a'] : pct>=45 ? ['보통','#ca8a04'] : ['미흡','#dc2626']; }
+// 판정은 글자로, 막대 색은 중립(빨강은 등급 전용) — 상위 25%만 강조색
+function pctTag(pct){ return pct>=75 ? ['우수','hi'] : pct>=45 ? ['보통','mid'] : ['미흡','lo']; }
 function deepDiveHtml(d){
   const A = state.all;
   const guArr = A.filter(x=>x.gu===d.gu).map(x=>x.score);
@@ -433,7 +530,7 @@ function deepDiveHtml(d){
     ['저밀도(사업성)', farOk?`${fmt(d.est_far)}%`:'저밀', farOk?pctile(-d.est_far, A.filter(x=>x.est_far!=null&&x.est_far>=30).map(x=>-x.est_far)):null],
   ];
   return `<div class="deep">
-    <div class="deep-h">🔬 딥분석</div>
+    <div class="deep-h">서울 내 위치 · 백분위</div>
     <div class="deep-rank">
       <div><span>${d.gu} 내 순위</span><b>${rank}<small>위 / ${guArr.length}동</small></b></div>
       <div><span>서울 전체</span><b>상위 ${Math.max(1,100-pctScore)}%</b></div>
@@ -441,8 +538,8 @@ function deepDiveHtml(d){
     ${rows.map(([k,disp,pct]) => {
       if (pct==null) return `<div class="deep-m"><div class="dm-top"><span>${k}</span><span class="mut">${disp}</span></div></div>`;
       const [t,c] = pctTag(pct);
-      return `<div class="deep-m"><div class="dm-top"><span>${k} <b style="color:${c}">${t}</b></span><span class="mut">${disp} · 상위${100-pct}%</span></div>
-        <div class="dm-bar"><div class="dm-fill" style="width:${pct}%;background:${c}"></div></div></div>`;
+      return `<div class="deep-m"><div class="dm-top"><span>${k}<span class="dm-tag ${c}">${t}</span></span><span class="mut">${disp} · 상위 ${Math.max(1,100-pct)}%</span></div>
+        <div class="dm-bar"><div class="dm-fill ${c==='hi'?'hi':''}" style="width:${pct}%"></div></div></div>`;
     }).join('')}
   </div>`;
 }
@@ -459,13 +556,13 @@ function dealsHtml(gu, dong){
   const d = dealsFor(gu, dong);
   if (!d || !d.n) return '';
   return `<div class="deals">
-    <div class="deals-h">💰 ${dong} 아파트 실거래 <span>최근 3개월 · ${d.n}건</span></div>
+    <div class="deals-h">${dong} 아파트 실거래 <span>최근 3개월 · ${d.n}건</span></div>
     <div class="cur-grid">
       ${d.p84?`<div><span>84㎡급 중앙</span><b>${d.p84}억</b></div>`:''}
       <div><span>전체 중앙값</span><b>${d.med}억</b></div>
       <div><span>거래 범위</span><b style="font-size:13px">${d.min}~${d.max}억</b></div>
     </div>
-    <div class="deals-note">📊 국토부 실거래가 ${state.deals.updated} 기준 · <b>동네 아파트 전체</b> 참고치(재개발 구역 자체 거래 아님). 정확한 매물·시세는 아래 링크로 확인.</div>
+    <div class="deals-note">국토부 실거래가 ${state.deals.updated} 기준 · <b>동네 아파트 전체</b> 참고치(재개발 구역 자체 거래 아님). 정확한 매물·시세는 아래 링크로 확인.</div>
   </div>`;
 }
 
@@ -478,7 +575,8 @@ function addToCompare(k){
 function renderCompareBar(msg){
   const b = $('#compareBar');
   b.classList.toggle('hidden', state.compare.length===0);
-  $('#cmpCount').textContent = msg || `⚖️ 비교 담긴 동 ${state.compare.length}개`;
+  $('#cmpCount').textContent = msg || `비교 ${state.compare.length}/4`;
+  if (msg) setTimeout(() => renderCompareBar(), 1400);
 }
 function compareTable(ds){
   const rows = [
@@ -505,7 +603,7 @@ function compareRadar(ds){
     ['저밀', d=>(d.est_far!=null&&d.est_far>=30)?Math.max(0,(400-Math.min(d.est_far,400))/400*100):50],
     ['점수', d=>d.score||0],
   ];
-  const CL=['#ef4444','#2563eb','#16a34a','#a855f7'], cx=140,cy=145,R=100,n=axes.length;
+  const CL=['#2563eb','#ea580c','#0e7490','#7c3aed'], cx=140,cy=145,R=100,n=axes.length;
   const pt=(i,r)=>[(cx+r*Math.sin(i/n*2*Math.PI)).toFixed(1),(cy-r*Math.cos(i/n*2*Math.PI)).toFixed(1)];
   let s=`<svg viewBox="0 0 280 300" class="cmp-radar">`;
   for(let g=1;g<=4;g++){ s+=`<polygon points="${axes.map((_,i)=>pt(i,R*g/4).join(',')).join(' ')}" fill="none" stroke="var(--line)"/>`; }
@@ -519,9 +617,22 @@ function compareRadar(ds){
 function openCompare(){
   const ds = state.compare.map(k=>state.all.find(x=>key(x)===k)).filter(Boolean);
   if(!ds.length) return;
-  $('#cmpBody').innerHTML = `<h2>⚖️ 구역 비교 <span class="dsub" style="font-weight:400">${ds.length}개 동</span></h2>` +
+  $('#cmpBody').innerHTML = `<h2>동 비교</h2><div class="dsub">${ds.length}개 동 · 굵은 칸이 항목별 최고값</div>` +
     compareRadar(ds) + compareTable(ds);
-  $('#compareModal').classList.remove('hidden');
+  openModal('#compareModal');
+}
+// 모달 열기/닫기 — 포커스를 닫기 버튼으로, 닫으면 원래 자리로
+let lastFocus = null;
+function openModal(sel){
+  lastFocus = document.activeElement;
+  $(sel).classList.remove('hidden');
+  const c = $(sel).querySelector('.dclose'); c && c.focus();
+}
+function closeModal(sel){
+  if ($(sel).classList.contains('hidden')) return false;
+  $(sel).classList.add('hidden');
+  lastFocus && lastFocus.focus && lastFocus.focus();
+  return true;
 }
 
 function showDetail(d){
@@ -530,18 +641,18 @@ function showDetail(d){
   const walk = d.walk_min!=null ? `${d.walk_min}분 <small>(${d.station_dist}m)</small>` : '—';
   // 추정 용적률: 대지면적 누락으로 30% 미만·미상은 신뢰불가 → 저밀 표기
   const far  = (d.est_far!=null && d.est_far>=30) ? `${fmt(d.est_far)}%`
-             : `<span style="color:#8b97a6;font-size:13px">저밀 <small>(추정한계)</small></span>`;
+             : `<span style="color:var(--mut);font-size:13px">저밀 <small>(추정한계)</small></span>`;
   const slope= d.avg_slope!=null ? `${fmt(d.avg_slope)}°` : '—';
   const note = d.note ? `<div class="dnote"><b>비고</b> · ${d.note}</div>` : '';
   // 이 동의 진행중 정비사업 + 진행단계 (동 상세에서 바로 확인)
   const dongProj = state.projects.filter(p => isResi(p) && p.gu===d.gu && p.dong===d.dong)
-    .sort((a,b)=> stageBucket(b.stage).key.localeCompare(stageBucket(a.stage).key));
+    .sort((a,b)=> stageIdx(b) - stageIdx(a));
   const projHtml = dongProj.length
-    ? `<div class="dproj"><div class="dproj-h">🏗️ 이 동의 진행중 정비사업 · ${dongProj.length}건</div>` +
-      dongProj.slice(0,8).map(p=>{ const b=stageBucket(p.stage);
-        return `<div class="dproj-row"><span class="dproj-stage" style="background:${b.color}">${p.stage||'-'}</span><span class="dproj-name">${p.name}</span></div>`;
-      }).join('') + (dongProj.length>8?`<div class="dproj-more">…외 ${dongProj.length-8}건</div>`:'') + `</div>`
-    : ((d.nohu||0)>=70 ? `<div class="dproj none">⭐ 진행중 정비사업 없음 — <b>미지정 발굴 후보</b></div>` : '');
+    ? `<div class="dproj"><div class="dproj-h">이 동의 진행중 정비사업 · ${dongProj.length}건</div>` +
+      dongProj.slice(0,8).map((p,i)=>{ const b=stageBucket(p.stage);
+        return `<button class="dproj-row" data-dp="${i}"><span class="dproj-stage" style="background:${b.color}">${p.stage||'-'}</span><span class="dproj-name">${shortName(p.name)}</span></button>`;
+      }).join('') + (dongProj.length>8?`<div class="dproj-more">외 ${dongProj.length-8}건</div>`:'') + `</div>`
+    : ((d.nohu||0)>=70 ? `<div class="dproj none">★ 진행중 정비사업 없음 — <b>미지정 발굴 후보</b></div>` : '');
   $('#detailBody').innerHTML = `
     <div class="dbody">
       <div class="dhead">
@@ -563,20 +674,20 @@ function showDetail(d){
       ${dealsHtml(d.gu, d.dong)}
       ${deepDiveHtml(d)}
       ${note}
-      <button class="dbtn cmp" id="cmpAddBtn">⚖️ 이 동을 비교에 담기</button>
+      <button class="dbtn primary" id="cmpAddBtn">${ico('scale')}${state.compare.includes(key(d))?'비교에 담김':'비교에 담기'}</button>
       ${naverBtn(d.lat, d.lng)}
-      <button class="dbtn ${hasGrid?'':'off'}" id="gridBtn" ${hasGrid?'':'disabled'}>
-        ${hasGrid ? '🔬 블록정밀 격자 보기 (100m)' : '🔬 블록정밀 — 이 동은 캐시 없음(백엔드 필요)'}
-      </button>
+      ${hasGrid ? `<button class="dbtn" id="gridBtn">${ico('grid')}블록정밀 격자 보기 (100m)</button>` : ''}
       ${simHtml(d)}
       <div class="disclaimer">
         ※ 건축물대장(국토부) 표본 기반 추정치. 종합점수 = 노후도·사업성(저층·용적·역세권)·연식·용도 가중합.
         실제 정비사업 지정·진행은 자치구·서울시 고시를 별도 확인하세요. 투자 판단 책임은 본인에게 있습니다.
       </div>
     </div>`;
-  $('#detail').classList.remove('hidden');
+  openDetail();
   if (hasGrid) $('#gridBtn').addEventListener('click', () => loadGrid(gridKey, d));
-  $('#cmpAddBtn').addEventListener('click', () => addToCompare(key(d)));
+  $('#cmpAddBtn').addEventListener('click', e => { addToCompare(key(d));
+    if (state.compare.includes(key(d))) e.currentTarget.innerHTML = `${ico('scale')}비교에 담김`; });
+  $('#detailBody').querySelectorAll('[data-dp]').forEach(b => b.addEventListener('click', () => focusProject(dongProj[+b.dataset.dp])));
   bindSim(d);
 }
 
@@ -589,7 +700,7 @@ function gridColor(ratio){
   return '#64748b';
 }
 function loadGrid(gridKey, d){
-  const btn = $('#gridBtn'); btn.textContent = '⏳ 격자 불러오는 중…';
+  const btn = $('#gridBtn'); btn.textContent = '격자 불러오는 중…';
   fetch(`./data/pinset/${gridKey}.json`).then(r => r.json()).then(g => {
     gridLayer.clearLayers();
     const cells = g.cells || [];
@@ -602,21 +713,32 @@ function loadGrid(gridKey, d){
       b.push([c.lat, c.lng]);
     });
     if (b.length) map.fitBounds(b, { padding:[40,40], maxZoom:17 });
-    btn.textContent = `🔬 블록정밀 ${cells.length}격자 표시중 (노후율 색상)`;
-  }).catch(() => { btn.textContent = '🔬 격자 로드 실패'; });
+    btn.textContent = `블록정밀 ${cells.length}격자 표시 중 (노후율 색상)`;
+  }).catch(() => { btn.textContent = '격자를 불러오지 못했습니다 — 다시 누르기'; });
 }
 
 // ---------- 투자 시뮬 (추정 분담금) ----------
+// 시뮬 기본값 — 이 동 84㎡ 실거래(공급 약 34평)로 신축 평당가를 잡고, 조합원가는 그 70%로 가정
+function simDefaults(d){
+  const dl = dealsFor(d.gu, d.dong);
+  const base = dl && (dl.p84 || dl.med);
+  if (!base) return { buy:6, right:4.5, unit:25, jp:3600, mp:5000, src:null };
+  const mp = Math.round(base*10000/34/100)*100;
+  return { buy:6, right:4.5, unit:25, jp:Math.round(mp*.7/100)*100, mp,
+    src:`${d.dong} 아파트 ${dl.p84?'84㎡급':'전체'} 중앙 <b>${base}억</b> → 신축 평당 ${mp.toLocaleString()}만원 가정` };
+}
 function simHtml(d){
+  const s = simDefaults(d);
   return `
   <div class="sim" id="sim">
-    <div class="sim-head" id="simHead">💰 투자 시뮬 — 추정 분담금<span class="chev">▾</span></div>
+    <button class="sim-head" id="simHead" aria-expanded="false">투자 시뮬 · 추정 분담금<small>예시값</small><svg class="ico chev"><use href="#i-chev"/></svg></button>
     <div class="sim-body">
-      <div class="sim-in"><label>매입가 (실투입 원가, 억원)</label><input type="number" id="s_buy" value="6" min="0" step="0.5"></div>
-      <div class="sim-in"><label>권리가액 (감정평가, 억원)</label><input type="number" id="s_right" value="4.5" min="0" step="0.5"></div>
-      <div class="sim-in"><label>분양받을 평형 (평)</label><input type="number" id="s_unit" value="25" min="1"></div>
-      <div class="sim-in"><label>조합원 분양가 (만원/평)</label><input type="number" id="s_jprice" value="3600" min="0" step="100"></div>
-      <div class="sim-in"><label>신축 예상시세 (만원/평)</label><input type="number" id="s_mprice" value="5000" min="0" step="100"></div>
+      <div class="sim-src">${s.src ? `예시값: ${s.src}. 매입가·권리가액은 본인 조건으로 고쳐 넣으세요.` : '이 동은 실거래 표본이 없어 <b>일반 예시값</b>입니다. 본인 조건으로 고쳐 넣으세요.'}</div>
+      <div class="sim-in"><label for="s_buy">매입가 (실투입 원가, 억원)</label><input type="number" id="s_buy" value="${s.buy}" min="0" step="0.5"></div>
+      <div class="sim-in"><label for="s_right">권리가액 (감정평가, 억원)</label><input type="number" id="s_right" value="${s.right}" min="0" step="0.5"></div>
+      <div class="sim-in"><label for="s_unit">분양받을 평형 (평)</label><input type="number" id="s_unit" value="${s.unit}" min="1"></div>
+      <div class="sim-in"><label for="s_jprice">조합원 분양가 (만원/평)</label><input type="number" id="s_jprice" value="${s.jp}" min="0" step="100"></div>
+      <div class="sim-in"><label for="s_mprice">신축 예상시세 (만원/평)</label><input type="number" id="s_mprice" value="${s.mp}" min="0" step="100"></div>
       <div class="sim-out" id="simOut"></div>
       <div class="sim-note">단순 교육용 추정. 사업비·이주비·금융비·취득세·사업기간(보통 10년+)·미동의 리스크는 반영하지 않습니다.
         분담금=조합원분양가−권리가액, 총투입=매입가+분담금, 차익=신축시세−총투입.</div>
@@ -625,7 +747,7 @@ function simHtml(d){
 }
 function bindSim(d){
   const sim = $('#sim');
-  $('#simHead').addEventListener('click', () => sim.classList.toggle('open'));
+  $('#simHead').addEventListener('click', e => { const o = sim.classList.toggle('open'); e.currentTarget.setAttribute('aria-expanded', o); });
   const ids = ['s_buy','s_right','s_unit','s_jprice','s_mprice'];
   const money = m => {                          // m: 만원
     const eok = m/10000;
@@ -656,10 +778,8 @@ function bindSim(d){
   calc();
 }
 
-$('#detailClose').addEventListener('click', () => {
-  $('#detail').classList.add('hidden'); gridLayer.clearLayers();
-  state.sel=null; renderList(); renderMarkers();
-});
+$('#detailClose').addEventListener('click', closeDetail);
+$('#detailClose2').addEventListener('click', closeDetail);
 
 // ---------- 모아타운 구역 조회 모드 ----------
 function enterMoaMode(){
@@ -698,24 +818,21 @@ function renderMoaList(){
   const total = zones.reduce((s,z)=>s+z.n,0);
   $('#resultCount').textContent = `${zones.length}개 구역 · ${total}개 사업`;
   $('#summary').innerHTML =
-    `<div class="chip"><b style="color:#0891b2">${zones.length}</b><span>🏘️ 모아 구역</span></div>` +
+    `<div class="chip"><b style="color:var(--moa)">${zones.length}</b><span>모아 구역</span></div>` +
     `<div class="chip"><b>${zones.filter(z=>z.n>=2).length}</b><span>다중사업</span></div>` +
     `<div class="chip"><b>${total}</b><span>소규모정비</span></div>` +
     `<div class="chip"><b>${new Set(zones.map(z=>z.gu)).size}</b><span>자치구</span></div>`;
   const ul = $('#list');
-  ul.innerHTML = zones.map((z,i) => `<li class="item" data-z="${i}">
-      <div class="zbadge">${z.n}</div>
-      <div class="iname"><b>${z.dong} 일대</b>
-        <span>${z.gu} · ${z.stage||'-'}</span>
-        <div><span class="vtag v진행중">${z.names[0].length>22?z.names[0].slice(0,22)+'…':z.names[0]}</span></div></div>
-    </li>`).join('') || '<li style="padding:24px;text-align:center;color:#8b97a6">조건에 맞는 구역이 없습니다</li>';
+  ul.innerHTML = zones.map((z,i) => `<li><button class="item" data-z="${i}">
+      <span class="zbadge">${z.n}</span>
+      <span class="iname"><b>${z.dong} 일대</b>
+        <span class="meta">${z.gu} · ${z.stage||'-'}</span>
+        <span class="meta">${shortName(z.names[0])}${z.n>1?` 외 ${z.n-1}곳`:''}</span></span>
+    </button></li>`).join('') || `<li class="empty"><b>조건에 맞는 구역이 없습니다</b><p>자치구·검색어를 바꿔 보세요</p></li>`;
   ul.querySelectorAll('.item').forEach(li => li.addEventListener('click', () => {
     const z = zones[+li.dataset.z];
-    map.setView([z.lat, z.lng], 16, { animate:true });
-    const members = z.names.map(n=>`• ${n}`).join('<br>') + (z.n>z.names.length?`<br>…외 ${z.n-z.names.length}곳`:'');
-    L.popup({ maxWidth:280 }).setLatLng([z.lat, z.lng])
-      .setContent(`<b>${z.gu} ${z.dong} 일대</b><br>모아타운 추정구역 · 소규모정비 ${z.n}곳<br><br>${members}`)
-      .openOn(map);
+    showMoaZoneDetail(z);
+    flyTo(z.lat, z.lng, 16);
   }));
 }
 
@@ -745,43 +862,43 @@ function openDash(){
   const maxMoa = Math.max(...moaRank.map(m=>m.n),1);
 
   $('#dashBody').innerHTML = `
-    <h2>📊 서울 재개발 통계</h2>
-    <div class="dsub">건축물대장 ${state.all.length?$('#dataYear').textContent:''} · 377개 동 · 주거단지 재개발·재건축 ${proj.length}곳(추진중)</div>
+    <h2>서울 재개발 통계</h2>
+    <div class="dsub">건축물대장 ${$('#dataYear').textContent} · ${all.length}개 동 · 주거단지 재개발·재건축 ${proj.length}곳(추진중) · 평균 노후도 ${avgNohu.toFixed(0)}%</div>
     <div class="dstat">
-      <div class="box"><b style="color:#0891b2">${cand.length}</b><span>🎯 미지정 후보 동</span></div>
-      <div class="box"><b>${catCnt.recon}</b><span>🏢 재건축</span></div>
-      <div class="box"><b>${catCnt.redev}</b><span>🏠 재개발</span></div>
-      <div class="box"><b style="color:#0891b2">${catCnt.moa}</b><span>🏘️ 모아타운</span></div>
+      <div class="box"><b style="color:var(--cand)">${cand.length}</b><span>미지정 후보 동</span></div>
+      <div class="box"><b>${catCnt.recon}</b><span>재건축</span></div>
+      <div class="box"><b>${catCnt.redev}</b><span>재개발</span></div>
+      <div class="box"><b>${catCnt.moa}</b><span>모아타운·소규모</span></div>
     </div>
     <div class="dsection">
       <h3>자치구별 미지정 후보 동 (상위 ${Math.min(guRank.length,15)})</h3>
       ${guRank.slice(0,15).map(g=>`<div class="gbar">
         <span class="gn">${g.gu}</span>
-        <span class="gt"><span class="gf" style="width:${g.n/maxGu*100}%;background:#3b82f6"></span></span>
+        <span class="gt"><span class="gf" style="width:${g.n/maxGu*100}%;background:var(--acc)"></span></span>
         <span class="gv">${g.n}개 · 노후${g.nohu.toFixed(0)}%</span></div>`).join('')}
     </div>
     <div class="dsection">
-      <h3>종합점수 등급 분포 (전체 377동)</h3>
+      <h3>종합점수 등급 분포 (전체 ${all.length}동)</h3>
       ${['S','A','B','C','D'].map(g=>`<div class="gbar">
-        <span class="gn g-${g}" style="font-weight:800">${g}등급</span>
+        <span class="gn g-${g}" style="font-weight:700">${g}등급</span>
         <span class="gt"><span class="gf" style="width:${gradeCnt[g]/maxGrade*100}%;background:${GCOL[g]}"></span></span>
         <span class="gv">${gradeCnt[g]}동</span></div>`).join('')}
     </div>
     <div class="dsection">
       <h3>실제 정비사업 진행단계 (${proj.length}곳)</h3>
-      ${STAGE_BUCKETS.map(b=>{const s=stageCnt[b.key];return `<div class="gbar">
-        <span class="gn" style="width:120px">${b.label}</span>
+      ${STAGE_BUCKETS.map((b,i)=>{const s=stageCnt[b.key];return `<div class="gbar">
+        <span class="gn wide">${i+1}. ${b.label}</span>
         <span class="gt"><span class="gf" style="width:${s.n/maxStage*100}%;background:${b.color}"></span></span>
         <span class="gv">${s.n}곳</span></div>`}).join('')}
     </div>
     <div class="dsection">
-      <h3>🏘️ 자치구별 모아타운·소규모주택정비 (${moa.length}곳, 상위 ${Math.min(moaRank.length,15)})</h3>
+      <h3>자치구별 모아타운·소규모주택정비 (${moa.length}곳, 상위 ${Math.min(moaRank.length,15)})</h3>
       ${moaRank.slice(0,15).map(m=>`<div class="gbar">
         <span class="gn">${m.gu}</span>
-        <span class="gt"><span class="gf" style="width:${m.n/maxMoa*100}%;background:#0891b2"></span></span>
+        <span class="gt"><span class="gf" style="width:${m.n/maxMoa*100}%;background:var(--moa)"></span></span>
         <span class="gv">${m.n}곳</span></div>`).join('')}
     </div>`;
-  $('#dash').classList.remove('hidden');
+  openModal('#dash');
 }
 
 // ---------- UI bindings ----------
@@ -797,6 +914,22 @@ function bindUI(){
     else enterMoaMode();
   });
   $('#guSel').addEventListener('change', e => { state.gu=e.target.value; apply(); });
+  $('#resiOnly').addEventListener('change', e => { state.resiOnly=e.target.checked; apply(); });
+  $('#resetFilters').addEventListener('click', () => resetFilters());
+  // 요약 칩 = 바로가기 (다시 누르면 해제)
+  $('#summary').addEventListener('click', e => {
+    const c = e.target.closest('[data-chip]'); if (!c || state.mode==='moa') return;
+    const v = c.dataset.chip;
+    if (v === 'cand'){
+      state.verdict = state.verdict==='후보' ? 'all' : '후보';
+      $('#verdictSeg').querySelectorAll('button').forEach(x=>x.classList.toggle('active', x.dataset.v===state.verdict));
+    } else {
+      const only = state.grades.size===1 && state.grades.has(v);
+      state.grades = only ? new Set(['S','A','B','C','D']) : new Set([v]);
+      document.querySelectorAll('#gradeFilter input').forEach(i => i.checked = state.grades.has(i.value));
+    }
+    apply();
+  });
   $('#gradeFilter').addEventListener('change', () => {
     state.grades = new Set([...document.querySelectorAll('#gradeFilter input:checked')].map(i=>i.value)); apply();
   });
@@ -838,26 +971,43 @@ function bindUI(){
     if (set.size===0) (item.dataset.dim==='stage'?STAGE_KEYS:METHOD_KEYS).forEach(x=>set.add(x)); // 전부 끄면 전체 복원
     renderProjects();
   });
-  const closeSplash = () => $('#splash').classList.add('hide');
+  // 스플래시 — '다시 보지 않기' (저장소 막힌 환경에서도 동작하도록 try/catch)
+  const SKIP_KEY = 'redev-radar:skip-splash';
+  const closeSplash = () => {
+    $('#splash').classList.add('hide');
+    if ($('#splashSkip').checked) { try { localStorage.setItem(SKIP_KEY, '1'); } catch(_){} }
+  };
+  let skip = false; try { skip = localStorage.getItem(SKIP_KEY) === '1'; } catch(_){}
+  if (skip) $('#splash').classList.add('hide'); else $('#splashStart').focus();
   $('#splashStart').addEventListener('click', closeSplash);
   $('#splash').addEventListener('click', e => { if (e.target.id==='splash') closeSplash(); });
 
-  // 모바일: 지도 컨트롤(🏗️·🚇)을 사이드바 필터 아래로 이동 (데스크톱은 지도 위 유지)
+  // 모바일: 필터는 접고(목록 먼저), 지도 컨트롤은 필터 상자 안으로. 데스크톱은 항상 펼침 + 지도 위
   const mq = window.matchMedia('(max-width:760px)');
-  const mc = $('#mapControls'), mapWrapEl = $('#mapWrap'), listHead = document.querySelector('.list-head');
+  const mc = $('#mapControls'), mapWrapEl = $('#mapWrap'), fbody = document.querySelector('#filterBox .filters');
   const placeControls = () => {
-    if (mq.matches){ if (mc.parentElement !== $('#sidebar')) $('#sidebar').insertBefore(mc, listHead); }
-    else { if (mc.parentElement !== mapWrapEl) mapWrapEl.appendChild(mc); }
+    if (mq.matches){ if (mc.parentElement !== fbody) fbody.appendChild(mc); $('#filterBox').open = false; }
+    else { if (mc.parentElement !== mapWrapEl) mapWrapEl.insertBefore(mc, $('#gradeLegend')); $('#filterBox').open = true; }
   };
   placeControls();
   mq.addEventListener('change', () => { placeControls(); if (state.showSubway) renderSubway(); });
+  $('#filterBox').addEventListener('toggle', () => { if (!mq.matches && !$('#filterBox').open) $('#filterBox').open = true; });
   $('#dashBtn').addEventListener('click', openDash);
-  $('#dashClose').addEventListener('click', () => $('#dash').classList.add('hidden'));
+  $('#dashClose').addEventListener('click', () => closeModal('#dash'));
   $('#cmpOpen').addEventListener('click', openCompare);
   $('#cmpClear').addEventListener('click', () => { state.compare=[]; renderCompareBar(); });
-  $('#cmpClose').addEventListener('click', () => $('#compareModal').classList.add('hidden'));
-  $('#compareModal').addEventListener('click', e => { if (e.target.id==='compareModal') $('#compareModal').classList.add('hidden'); });
-  $('#dash').addEventListener('click', e => { if (e.target.id==='dash') $('#dash').classList.add('hidden'); });
+  $('#cmpClose').addEventListener('click', () => closeModal('#compareModal'));
+  $('#compareModal').addEventListener('click', e => { if (e.target.id==='compareModal') closeModal('#compareModal'); });
+  $('#dash').addEventListener('click', e => { if (e.target.id==='dash') closeModal('#dash'); });
+  // Esc = 가장 위 레이어부터 닫기 (스플래시 → 모달 → 상세)
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    if (!$('#splash').classList.contains('hide')) return closeSplash();
+    if (closeModal('#compareModal') || closeModal('#dash')) return;
+    if (!$('#detail').classList.contains('hidden')) closeDetail();
+  });
+  // 줌에 따라 정비사업 점 크기 갱신
+  map.on('zoomend', () => { if (state.showProjects) renderProjects(); });
 }
 
 function fmt(v){ return v==null ? '—' : (Math.round(v*10)/10).toLocaleString(); }

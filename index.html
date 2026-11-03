@@ -2,78 +2,106 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>재개발 레이더 · 서울</title>
   <link rel="preconnect" href="https://unpkg.com" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-  <link rel="stylesheet" href="./style.css?v=33" />
+  <link rel="stylesheet" href="./style.css?v=34" />
 </head>
 <body>
+  <!-- 아이콘 스프라이트 (1.75 stroke, currentColor) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-radar" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M12 12l6-6"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/></symbol>
+      <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20h16"/><path d="M7 16v-5M12 16V6M17 16v-8"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></symbol>
+      <symbol id="i-train" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="14" rx="3"/><path d="M5 10.5h14"/><path d="M8.5 21l2-4M15.5 21l-2-4"/></symbol>
+      <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3.5l8.5 4.5-8.5 4.5L3.5 8z"/><path d="M3.5 12.5l8.5 4.5 8.5-4.5"/></symbol>
+      <symbol id="i-blocks" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></symbol>
+      <symbol id="i-scale" viewBox="0 0 24 24"><path d="M12 4v16M8 20h8M5 7h14"/><path d="M5 7l-2.5 6h5zM19 7l-2.5 6h5z"/></symbol>
+      <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-8.5 8.5"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+      <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="2"/><path d="M3.5 9.2h17M3.5 14.8h17M9.2 3.5v17M14.8 3.5v17"/></symbol>
+      <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3"/><path d="M4.5 4v4h4"/></symbol>
+      <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 5h16l-6.2 7.6V19l-3.6-1.8v-4.6z"/></symbol>
+      <symbol id="i-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+      <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></symbol>
+    </defs>
+  </svg>
+
   <div id="app">
     <!-- Sidebar -->
-    <aside id="sidebar">
+    <aside id="sidebar" aria-label="동 탐색">
       <header class="side-head">
         <div class="brand">
-          <span class="logo">📡</span>
+          <svg class="logo" aria-hidden="true"><use href="#i-radar"/></svg>
           <div>
             <h1>재개발 레이더</h1>
-            <p class="sub">서울 · 건축물대장 <span id="dataYear"></span> 기준 · 377개 동</p>
+            <p class="sub">서울 · 건축물대장 <span id="dataYear"></span> · <span id="dongTotal">—</span>개 동</p>
           </div>
-          <button id="dashBtn" class="dashbtn" title="통계 대시보드">📊</button>
+          <button id="dashBtn" class="iconbtn" aria-label="통계 대시보드" title="통계 대시보드"><svg class="ico"><use href="#i-chart"/></svg></button>
         </div>
       </header>
 
-      <!-- Summary chips -->
+      <!-- Summary chips (클릭 = 해당 조건만 보기) -->
       <div id="summary" class="summary"></div>
 
-      <!-- Filters -->
-      <div class="filters">
-        <div class="frow">
-          <input type="search" id="search" placeholder="동·구 검색 (예: 청운동, 중구)" autocomplete="off" />
-        </div>
+      <!-- Filters: 데스크톱은 항상 펼침, 모바일은 접힘 -->
+      <details id="filterBox" class="fbox" open>
+        <summary class="fsum"><svg class="ico"><use href="#i-filter"/></svg>필터 <span id="filterN" class="fcount"></span><svg class="ico chev"><use href="#i-chev"/></svg></summary>
+        <div class="filters">
+          <div class="frow searchrow">
+            <svg class="ico sico" aria-hidden="true"><use href="#i-search"/></svg>
+            <input type="search" id="search" placeholder="동·구·구역명 (예: 청운동, 양평13)" autocomplete="off" aria-label="동·구·구역명 검색" />
+          </div>
 
-        <div class="frow seg" id="verdictSeg">
-          <button data-v="all" class="active">전체</button>
-          <button data-v="후보">🎯 미지정 후보</button>
-          <button data-v="진행중">진행중</button>
-          <button data-v="경계">경계</button>
-        </div>
-        <div class="frow"><button id="moaModeBtn" class="modebtn">🏘️ 모아타운 구역 조회 <b id="moaModeN">116</b></button></div>
+          <div class="frow seg" id="verdictSeg" role="group" aria-label="정비 상태">
+            <button data-v="all" class="active">전체</button>
+            <button data-v="후보">미지정 후보</button>
+            <button data-v="진행중">진행중</button>
+            <button data-v="경계">경계</button>
+          </div>
+          <label class="ctoggle"><input type="checkbox" id="resiOnly" checked> 주거지만 <span class="hint">도심상업지 제외</span></label>
+          <div class="frow"><button id="moaModeBtn" class="modebtn"><svg class="ico"><use href="#i-blocks"/></svg>모아타운 구역 조회 <b id="moaModeN">—</b></button></div>
 
-        <div class="frow">
-          <label class="flabel">자치구</label>
-          <select id="guSel"><option value="all">전체 (25개 구)</option></select>
-        </div>
+          <div class="frow">
+            <label class="flabel" for="guSel">자치구</label>
+            <select id="guSel"><option value="all">전체 (25개 구)</option></select>
+          </div>
 
-        <div class="frow grades" id="gradeFilter">
-          <span class="flabel">등급</span>
-          <label><input type="checkbox" value="S" checked><b class="g-S">S</b></label>
-          <label><input type="checkbox" value="A" checked><b class="g-A">A</b></label>
-          <label><input type="checkbox" value="B" checked><b class="g-B">B</b></label>
-          <label><input type="checkbox" value="C" checked><b class="g-C">C</b></label>
-          <label><input type="checkbox" value="D" checked><b class="g-D">D</b></label>
-        </div>
+          <div class="frow grades" id="gradeFilter" role="group" aria-label="등급">
+            <span class="flabel">등급</span>
+            <label><input type="checkbox" value="S" checked><b class="g-S">S</b></label>
+            <label><input type="checkbox" value="A" checked><b class="g-A">A</b></label>
+            <label><input type="checkbox" value="B" checked><b class="g-B">B</b></label>
+            <label><input type="checkbox" value="C" checked><b class="g-C">C</b></label>
+            <label><input type="checkbox" value="D" checked><b class="g-D">D</b></label>
+          </div>
 
-        <div class="frow slider">
-          <label class="flabel">노후도 ≥ <span id="nohuVal">70</span>%</label>
-          <input type="range" id="nohuRange" min="60" max="100" value="70" step="5" />
-        </div>
+          <div class="frow slider">
+            <label class="flabel" for="nohuRange">노후도 ≥ <span id="nohuVal" class="num">70</span>%</label>
+            <input type="range" id="nohuRange" min="60" max="100" value="70" step="5" />
+          </div>
 
-        <div class="frow slider">
-          <label class="flabel">역세권 도보 ≤ <span id="walkVal">전체</span></label>
-          <input type="range" id="walkRange" min="0" max="30" value="30" step="1" />
-        </div>
+          <div class="frow slider">
+            <label class="flabel" for="walkRange">역세권 도보 ≤ <span id="walkVal" class="num">전체</span></label>
+            <input type="range" id="walkRange" min="0" max="30" value="30" step="1" />
+          </div>
 
-        <div class="frow slider">
-          <label class="flabel">추정 용적률 ≤ <span id="farVal">200%</span> <span class="hint">(고밀 제외)</span></label>
-          <input type="range" id="farRange" min="100" max="800" value="200" step="50" />
+          <div class="frow slider">
+            <label class="flabel" for="farRange">추정 용적률 ≤ <span id="farVal" class="num">200%</span> <span class="hint">고밀 제외</span></label>
+            <input type="range" id="farRange" min="100" max="800" value="200" step="50" />
+          </div>
+          <button id="resetFilters" class="linkbtn hidden"><svg class="ico"><use href="#i-reset"/></svg>필터 초기화</button>
         </div>
-      </div>
+      </details>
 
       <div class="list-head">
         <span id="resultCount">—</span>
-        <select id="sortSel" class="sortsel">
+        <select id="sortSel" class="sortsel" aria-label="정렬">
           <option value="score">종합점수순</option>
           <option value="nohu">노후도순</option>
           <option value="walk">역세권순</option>
@@ -87,76 +115,81 @@
     <main id="mapWrap">
       <div id="map"></div>
       <div id="mapControls" class="mapctrl">
-        <label class="ctoggle"><input type="checkbox" id="projToggle"> 🏗️ 주거단지 재개발·재건축 <b id="projCount">840</b>곳</label>
-        <div id="projCat" class="projcat seg hidden">
+        <label class="ctoggle strong"><input type="checkbox" id="projToggle"><svg class="ico"><use href="#i-layers"/></svg>정비사업 <b id="projCount" class="num">—</b>곳</label>
+        <div id="projCat" class="projcat seg hidden" role="group" aria-label="사업 종류">
           <button data-c="all" class="active">전체</button>
-          <button data-c="recon">🏢 재건축</button>
-          <button data-c="redev">🏠 재개발</button>
-          <button data-c="moa">🏘️ 모아</button>
+          <button data-c="recon">재건축</button>
+          <button data-c="redev">재개발</button>
+          <button data-c="moa">모아</button>
         </div>
-        <label class="ctoggle sub hidden" id="moaZoneWrap"><input type="checkbox" id="moaZone"> 🔵 구역으로 묶기 <b id="moaZoneN">34</b></label>
-        <div id="colorBy" class="projcat seg hidden">
-          <button data-cb="stage" class="active">🎨 진행단계</button>
-          <button data-cb="method">🎨 추진방식</button>
+        <label class="ctoggle sub hidden" id="moaZoneWrap"><input type="checkbox" id="moaZone"> 구역으로 묶기 <b id="moaZoneN" class="num">—</b></label>
+        <div id="colorBy" class="projcat seg hidden" role="group" aria-label="색상 기준">
+          <button data-cb="stage" class="active">진행단계</button>
+          <button data-cb="method">추진방식</button>
         </div>
         <div id="stageLegend" class="stagelegend hidden"></div>
-        <label class="ctoggle sep"><input type="checkbox" id="subwayToggle" checked> 🚇 지하철 노선도</label>
+        <label class="ctoggle sep"><input type="checkbox" id="subwayToggle" checked><svg class="ico"><use href="#i-train"/></svg>지하철 노선도</label>
       </div>
-      <div class="legend">
-        <span class="lt">종합점수 등급</span>
-        <span><i class="dot g-S"></i>S 90+</span>
-        <span><i class="dot g-A"></i>A 80+</span>
-        <span><i class="dot g-B"></i>B 65+</span>
-        <span><i class="dot g-C"></i>C 50+</span>
+      <div class="legend" id="gradeLegend">
+        <span class="lt">동 종합점수</span>
+        <span><i class="dot g-S"></i>S <em>90+</em></span>
+        <span><i class="dot g-A"></i>A <em>80+</em></span>
+        <span><i class="dot g-B"></i>B <em>65+</em></span>
+        <span><i class="dot g-C"></i>C <em>50+</em></span>
         <span><i class="dot g-D"></i>D</span>
-        <span><i class="star-leg">★</i>노후高·미개발</span>
+        <span><i class="star-leg">★</i>노후 70%+ · 사업 없음</span>
+      </div>
+      <!-- 비교 바 (지도 상단 중앙) -->
+      <div id="compareBar" class="cmpbar hidden" role="status">
+        <svg class="ico"><use href="#i-scale"/></svg>
+        <span id="cmpCount"></span>
+        <button id="cmpOpen">비교하기</button>
+        <button id="cmpClear" class="cmpx" aria-label="비교 목록 비우기"><svg class="ico"><use href="#i-x"/></svg></button>
       </div>
     </main>
   </div>
 
   <!-- 시작 스플래시 -->
-  <div id="splash">
+  <div id="splash" role="dialog" aria-modal="true" aria-labelledby="splashTitle">
     <div class="splash-card">
-      <div class="splash-logo">📡</div>
-      <h1>재개발 레이더</h1>
+      <svg class="splash-logo" aria-hidden="true"><use href="#i-radar"/></svg>
+      <h1 id="splashTitle">재개발 레이더</h1>
       <p class="splash-sub">서울 재개발 후보 · 정비사업 탐색 지도</p>
       <div class="splash-credit">
         <div>만든이 · <b>당산동 사는 박정원</b></div>
         <div>문의 · <a href="mailto:qkrwjddnjs70@gmail.com">qkrwjddnjs70@gmail.com</a></div>
       </div>
       <button id="splashStart">시작하기</button>
+      <label class="splash-skip"><input type="checkbox" id="splashSkip"> 다시 보지 않기</label>
     </div>
   </div>
 
-  <!-- 비교 바 + 모달 -->
-  <div id="compareBar" class="cmpbar hidden">
-    <span id="cmpCount"></span>
-    <button id="cmpOpen">비교하기 ⚖️</button>
-    <button id="cmpClear" title="비우기">✕</button>
-  </div>
-  <div id="compareModal" class="dash hidden">
+  <!-- 비교 모달 -->
+  <div id="compareModal" class="dash hidden" role="dialog" aria-modal="true" aria-label="동 비교">
     <div class="dash-card">
-      <button id="cmpClose" class="dclose">✕</button>
+      <button id="cmpClose" class="dclose" aria-label="닫기"><svg class="ico"><use href="#i-x"/></svg></button>
       <div id="cmpBody"></div>
     </div>
   </div>
 
   <!-- Dashboard modal -->
-  <div id="dash" class="dash hidden">
+  <div id="dash" class="dash hidden" role="dialog" aria-modal="true" aria-label="서울 재개발 통계">
     <div class="dash-card">
-      <button id="dashClose" class="dclose">✕</button>
+      <button id="dashClose" class="dclose" aria-label="닫기"><svg class="ico"><use href="#i-x"/></svg></button>
       <div id="dashBody"></div>
     </div>
   </div>
 
-  <!-- Detail panel -->
-  <div id="detail" class="detail hidden">
-    <button id="detailClose" class="dclose">✕</button>
+  <!-- Detail panel (데스크톱: 우측 패널 / 모바일: 바텀시트) -->
+  <div id="detail" class="detail hidden" role="dialog" aria-label="상세 정보">
+    <div class="grabber" aria-hidden="true"></div>
+    <button id="detailClose" class="dclose" aria-label="상세 닫기"><svg class="ico"><use href="#i-x"/></svg></button>
     <div id="detailBody"></div>
+    <div class="dfoot"><button id="detailClose2" class="dbtn">닫기</button></div>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script src="./app.js?v=33"></script>
+  <script src="./app.js?v=34"></script>
 </body>
 </html>
