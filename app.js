@@ -31,6 +31,9 @@ const METHODS = [
 ];
 function methodOf(p){
   const n = p.name || '';
+  // 이름에 '공공'이 없는 공공재개발 등 — 큐레이션(curated_plans.json)의 method가 우선
+  const cm = curatedPlan(p)?.method;
+  if (cm){ const m = METHODS.find(x => x.key === cm); if (m) return m; }
   for (const m of METHODS) if (m.test(n)) return m;
   const t = p.type;
   if (['가로주택정비','소규모재건축','소규모재개발'].includes(t) || n.includes('모아')) return { key:'모아', label:'모아타운·소규모', color:'#0e7490' };
